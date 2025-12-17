@@ -1,0 +1,38 @@
+.card {
+    background: white;
+    padding: 32px 24px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* or center? generic design usually center but request said 'Large tool icons', maybe left aligned like minimal SaaS? let's go with left or center. Center feels more like a grid of actions. ILovePDF uses center. */
+    text-align: center;
+    align-items: center;
+    border: 1px solid transparent;
+    height: 100%;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+    border-color: #eee;
+}
+
+.iconWrapper {
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-color);
+}
+
+.description {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}

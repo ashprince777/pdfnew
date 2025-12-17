@@ -1,0 +1,142 @@
+.navbar {
+    background-color: var(--bg-color);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 70px;
+    display: flex;
+    align-items: center;
+}
+
+.navContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-color);
+}
+
+.icon {
+    background: var(--primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 1.2rem;
+}
+
+.desktopMenu {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.navLink {
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.navLink:hover {
+    color: var(--primary);
+}
+
+.btnAll {
+    background: var(--card-bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdownContent {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius);
+    min-width: 200px;
+    padding: 10px 0;
+    flex-direction: column;
+}
+
+.dropdown:hover .dropdownContent {
+    display: flex;
+}
+
+.dropdownContent a {
+    padding: 10px 20px;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.dropdownContent a:hover {
+    background: #f1f1f1;
+    color: var(--primary);
+}
+
+.mobileToggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.mobileMenu {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .desktopMenu {
+        display: none;
+    }
+
+    .mobileToggle {
+        display: block;
+    }
+
+    .mobileMenu {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background: white;
+        padding: 20px;
+        box-shadow: var(--shadow-md);
+        gap: 16px;
+    }
+
+    .mobileMenu a {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .mobileDivider {
+        font-size: 0.9rem;
+        color: #888;
+        text-transform: uppercase;
+        margin-top: 10px;
+    }
+}

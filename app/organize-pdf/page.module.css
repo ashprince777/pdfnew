@@ -1,0 +1,95 @@
+.workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 20px;
+    background: white;
+    padding: 24px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.pageCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border: 1px solid transparent;
+    position: relative;
+    cursor: grab;
+}
+
+.pageCard:hover {
+    border-color: #ddd;
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.thumbnailWrapper {
+    width: 100px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #eee;
+    background: white;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.thumbnail {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.pageNumber {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.deleteBtn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #dc3545;
+    transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.dragHandle {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    color: #aaa;
+    cursor: grab;
+}
+
+.bottomBar {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}

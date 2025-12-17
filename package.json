@@ -9,11 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "docx": "^9.5.1",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.561.0",
     "next": "16.0.10",
+    "pdf-lib": "^1.17.1",
+    "@pdfsmaller/pdf-encrypt-lite": "^1.0.0",
+    "pdfjs-dist": "^5.4.449",
+    "pptxgenjs": "^4.0.1",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

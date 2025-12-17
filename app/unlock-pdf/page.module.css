@@ -1,0 +1,41 @@
+.workspace {
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.fileItem {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    align-items: center;
+}
+
+.fileName {
+    font-weight: 500;
+}
+
+.removeBtn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input {
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    font-size: 1.1rem;
+}

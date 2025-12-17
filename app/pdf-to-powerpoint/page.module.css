@@ -1,0 +1,29 @@
+.workspace {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.fileItem {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    align-items: center;
+    width: 100%;
+}
+
+.fileName {
+    font-weight: 500;
+}
+
+.removeBtn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+}

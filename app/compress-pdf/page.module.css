@@ -1,0 +1,50 @@
+.workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 600px;
+    margin: 0 auto 60px;
+}
+
+.fileItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    padding: 16px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fileIcon {
+    color: var(--primary);
+}
+
+.fileName {
+    font-weight: 500;
+}
+
+.fileSize {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.removeBtn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+}
+
+.bottomBar {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}

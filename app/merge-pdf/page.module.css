@@ -1,0 +1,84 @@
+.workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto 60px;
+}
+
+.fileList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fileItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    padding: 16px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.fileIcon {
+    color: var(--primary);
+}
+
+.fileName {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.fileSize {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.removeBtn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.removeBtn:hover {
+    background: #ffe6e6;
+}
+
+.bottomBar {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.seoContent {
+    margin-top: 60px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.seoContent h2 {
+    margin-bottom: 16px;
+}
+
+.text-muted {
+    color: var(--text-light);
+    margin-bottom: 20px;
+}
