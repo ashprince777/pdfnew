@@ -4,7 +4,7 @@ import { PDFDocument } from 'pdf-lib';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Wrench, arrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Trash2 } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
@@ -33,7 +33,7 @@ export default function RepairClient() {
             const arrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
             const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             setDownloadUrl(url);
             setStatus('DONE');

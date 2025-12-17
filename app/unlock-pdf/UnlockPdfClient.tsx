@@ -58,7 +58,7 @@ export default function UnlockPdfClient() {
             // If we successfully loaded it (meaning it wasn't read-encrypted, just maybe permission restricted?)
             // We just save it again.
             const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
             setDownloadUrl(url);

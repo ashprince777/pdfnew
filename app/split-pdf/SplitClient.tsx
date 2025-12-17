@@ -79,7 +79,7 @@ export default function SplitClient() {
                 copiedPages.forEach(page => newPdf.addPage(page));
 
                 const pdfBytes = await newPdf.save();
-                const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+                const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 setDownloadUrl(url);
                 setZipFilename(`${file.name.replace('.pdf', '')}_extracted.pdf`);

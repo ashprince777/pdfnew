@@ -39,7 +39,7 @@ export default function MergeClient() {
             }
 
             const pdfBytes = await mergedPdf.save();
-            const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
             setDownloadUrl(url);

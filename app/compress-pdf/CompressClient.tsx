@@ -24,8 +24,8 @@ export default function CompressClient() {
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer);
-            const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
-            const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
             setFileSizeInfo({
