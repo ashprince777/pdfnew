@@ -10,7 +10,8 @@
     display: flex;
     justify-content: space-between;
     padding: 16px;
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
     align-items: center;

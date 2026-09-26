@@ -29,7 +29,23 @@ export default function JpgToPdfClient() {
 
             for (const file of files) {
                 const arrayBuffer = await file.arrayBuffer();
-                const image = await pdfDoc.embedJpg(arrayBuffer);
+                let image;
+                try {
+                    const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+                    image = isPng
+                        ? await pdfDoc.embedPng(arrayBuffer)
+                        : await pdfDoc.embedJpg(arrayBuffer);
+                } catch {
+                    // Fallback using canvas for WebP, BMP, GIF, or unusual JPEG/PNG encodings
+                    const imgBitmap = await createImageBitmap(new Blob([arrayBuffer]));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imgBitmap.width;
+                    canvas.height = imgBitmap.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(imgBitmap, 0, 0);
+                    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    image = await pdfDoc.embedJpg(jpegDataUrl);
+                }
                 const page = pdfDoc.addPage([image.width, image.height]);
                 page.drawImage(image, {
                     x: 0,
@@ -41,6 +57,7 @@ export default function JpgToPdfClient() {
 
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
             const url = URL.createObjectURL(blob);
 
             setDownloadUrl(url);
@@ -53,6 +70,7 @@ export default function JpgToPdfClient() {
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFiles([]);
         setStatus('IDLE');
         setDownloadUrl(null);

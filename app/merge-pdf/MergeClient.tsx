@@ -33,13 +33,14 @@ export default function MergeClient() {
 
             for (const file of files) {
                 const arrayBuffer = await file.arrayBuffer();
-                const pdf = await PDFDocument.load(arrayBuffer);
+                const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
                 copiedPages.forEach((page) => mergedPdf.addPage(page));
             }
 
             const pdfBytes = await mergedPdf.save();
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
             const url = URL.createObjectURL(blob);
 
             setDownloadUrl(url);
@@ -52,6 +53,7 @@ export default function MergeClient() {
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFiles([]);
         setStatus('IDLE');
         setDownloadUrl(null);
@@ -105,6 +107,7 @@ export default function MergeClient() {
                     downloadUrl={downloadUrl}
                     downloadFilename="merged.pdf"
                     onReset={reset}
+                    message="PDFs merged successfully into one document!"
                 />
             )}
         </div>

@@ -10,7 +10,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: white;
+    background: var(--card-surface);
     padding: 16px;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
@@ -40,7 +40,8 @@
 }
 
 .options {
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     padding: 24px;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
@@ -68,13 +69,15 @@
 }
 
 .radioLabel:hover {
-    background: #f8f9fa;
+    background: var(--card-bg);
 }
 
 .input {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-color);
     border-radius: 6px;
     margin-top: 8px;
     font-size: 1rem;

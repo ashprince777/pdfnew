@@ -8,7 +8,8 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 20px;
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     padding: 24px;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
@@ -22,15 +23,15 @@
     align-items: center;
     padding: 10px;
     border-radius: 8px;
-    background: #f8f9fa;
+    background: var(--card-bg);
     border: 1px solid transparent;
     position: relative;
     cursor: grab;
 }
 
 .pageCard:hover {
-    border-color: #ddd;
-    background: white;
+    border-color: var(--border-color);
+    background: var(--card-surface);
     box-shadow: var(--shadow-sm);
 }
 
@@ -40,8 +41,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #eee;
-    background: white;
+    border: 1px solid var(--border-color);
+    background: var(--card-surface);
     margin-bottom: 8px;
     overflow: hidden;
 }
@@ -62,8 +63,8 @@
     position: absolute;
     top: 5px;
     right: 5px;
-    background: white;
-    border: 1px solid #ddd;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
     width: 24px;
     height: 24px;

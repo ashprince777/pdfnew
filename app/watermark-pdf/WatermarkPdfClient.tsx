@@ -5,6 +5,8 @@ import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import { Stamp, ArrowRight, Trash2 } from 'lucide-react';
 
+import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+
 export default function WatermarkPdfClient() {
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
@@ -25,14 +27,62 @@ export default function WatermarkPdfClient() {
 
         setStatus('PROCESSING');
 
-        // Simulate processing for now
-        setTimeout(() => {
-            alert("Watermarking applied (Simulation). Saving functionality coming soon.");
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+            const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            const rawText = watermarkText.trim() || 'CONFIDENTIAL';
+            const text = rawText
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u2013\u2014]/g, '-')
+                .replace(/[\u2022\u00B7]/g, '* ')
+                .replace(/[^\x00-\xFF]/g, ' ');
+
+            const pages = pdfDoc.getPages();
+            for (const page of pages) {
+                const { width, height } = page.getSize();
+                const fontSize = Math.max(24, Math.min(width, height) / 10);
+                const textWidth = font.widthOfTextAtSize(text, fontSize);
+                const textHeight = font.heightAtSize(fontSize);
+
+                // Center coordinates accounting for 45 deg rotation
+                const rad = (45 * Math.PI) / 180;
+                const cos = Math.cos(rad);
+                const sin = Math.sin(rad);
+                const cx = width / 2;
+                const cy = height / 2;
+                const x = cx - (textWidth * cos - textHeight * sin) / 2;
+                const y = cy - (textWidth * sin + textHeight * cos) / 2;
+
+                page.drawText(text, {
+                    x,
+                    y,
+                    size: fontSize,
+                    font,
+                    color: rgb(0.8, 0.1, 0.1),
+                    opacity: 0.3,
+                    rotate: degrees(45),
+                });
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+
+            const url = URL.createObjectURL(blob);
+            setDownloadUrl(url);
+            setStatus('DONE');
+        } catch (error) {
+            console.error('Error applying watermark:', error);
+            alert('Failed to apply watermark. Please try again.');
             setStatus('IDLE');
-        }, 1500);
+        }
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFile(null);
         setStatus('IDLE');
         setDownloadUrl(null);

@@ -36,6 +36,7 @@ export default function ProtectClient() {
             }
 
             const blob = await response.blob();
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
             const url = URL.createObjectURL(blob);
             setDownloadUrl(url);
             setStatus('DONE');
@@ -47,6 +48,7 @@ export default function ProtectClient() {
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFile(null);
         setPassword('');
         setStatus('IDLE');

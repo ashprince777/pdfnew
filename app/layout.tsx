@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import AdUnit from '@/components/AdUnit';
 import CookieConsent from '@/components/CookieConsent';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import { ToastProvider } from '@/components/ToastProvider';
@@ -69,9 +68,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <ToastProvider>
           <Navbar />
-          <div className="container">
-            <AdUnit slot="header-ad" />
-          </div>
           <main style={{ minHeight: 'calc(100vh - 200px)' }}>
             {children}
           </main>

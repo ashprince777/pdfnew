@@ -12,7 +12,8 @@
     gap: 10px;
     max-height: 300px;
     overflow-y: auto;
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     padding: 16px;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
@@ -22,7 +23,7 @@
     display: flex;
     justify-content: space-between;
     padding: 8px;
-    background: #f8f9fa;
+    background: var(--card-bg);
     border-radius: 6px;
     align-items: center;
 }
@@ -46,7 +47,8 @@
     display: flex;
     justify-content: space-between;
     gap: 20px;
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     padding: 20px;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
@@ -62,6 +64,8 @@
 .select {
     padding: 10px;
     border-radius: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-color);
     font-size: 1rem;
 }

@@ -28,7 +28,7 @@ export default function SplitClient() {
 
         try {
             const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer);
+            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
             const totalPages = pdfDoc.getPageCount();
 
             if (mode === 'ALL_PAGES') {
@@ -39,13 +39,14 @@ export default function SplitClient() {
                     const [page] = await newPdf.copyPages(pdfDoc, [i]);
                     newPdf.addPage(page);
                     const pdfBytes = await newPdf.save();
-                    zip.file(`${file.name.replace('.pdf', '')}_page_${i + 1}.pdf`, pdfBytes);
+                    zip.file(`${file.name.replace(/\.[^/.]+$/, '')}_page_${i + 1}.pdf`, pdfBytes);
                 }
 
+                if (downloadUrl) URL.revokeObjectURL(downloadUrl);
                 const content = await zip.generateAsync({ type: 'blob' });
                 const url = URL.createObjectURL(content);
                 setDownloadUrl(url);
-                setZipFilename(`${file.name.replace('.pdf', '')}_split.zip`);
+                setZipFilename(`${file.name.replace(/\.[^/.]+$/, '')}_split.zip`);
             } else {
                 // Range extraction logic
                 const pageIndices: number[] = [];
@@ -80,9 +81,10 @@ export default function SplitClient() {
 
                 const pdfBytes = await newPdf.save();
                 const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+                if (downloadUrl) URL.revokeObjectURL(downloadUrl);
                 const url = URL.createObjectURL(blob);
                 setDownloadUrl(url);
-                setZipFilename(`${file.name.replace('.pdf', '')}_extracted.pdf`);
+                setZipFilename(`${file.name.replace(/\.[^/.]+$/, '')}_extracted.pdf`);
             }
 
             setStatus('DONE');
@@ -94,6 +96,7 @@ export default function SplitClient() {
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFile(null);
         setStatus('IDLE');
         setDownloadUrl(null);
@@ -173,6 +176,7 @@ export default function SplitClient() {
                     downloadUrl={downloadUrl}
                     downloadFilename={zipFilename}
                     onReset={reset}
+                    message={mode === 'ALL_PAGES' ? "All PDF pages extracted into separate files!" : "Selected pages extracted into a new PDF!"}
                 />
             )}
         </div>

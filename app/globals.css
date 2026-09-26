@@ -1,17 +1,105 @@
+@import "tailwindcss";
+
 :root {
-  --primary: #E33636;
-  --primary-hover: #c42b2b;
-  --bg-color: #ffffff;
-  --text-color: #333333;
-  --text-light: #666666;
-  --border-color: #dddddd;
-  --card-bg: #f8f9fa;
-  --success: #28a745;
-  --error: #dc3545;
+  /* --- Brand & Accent Palette --- */
+  --primary: #e11d48;              /* Balanced Crimson / Rose 600 */
+  --primary-hover: #be123c;        /* Deep Crimson */
+  --primary-subtle: #ffe4e6;       /* Soft crimson tint */
+  
+  --accent: #4f46e5;               /* Modern Indigo Accent */
+  --accent-hover: #4338ca;
+  --accent-subtle: #e0e7ff;
+
+  --success: #10b981;              /* Emerald */
+  --warning: #f59e0b;              /* Amber */
+  --error: #ef4444;                /* Coral Red */
+
+  /* --- Category Palette (Unified across all 6 domains) --- */
+  --cat-organize: #e11d48;         /* Rose / Crimson */
+  --cat-optimize: #10b981;         /* Emerald */
+  --cat-to-pdf: #2563eb;           /* Blue */
+  --cat-from-pdf: #0891b2;         /* Cyan */
+  --cat-edit: #8b5cf6;             /* Purple */
+  --cat-security: #dc2626;         /* Ruby Red */
+
+  /* --- Neutrals & Surfaces (Light Mode) --- */
+  --bg-color: #f8fafc;             /* Slate 50 canvas */
+  --card-bg: #ffffff;              /* Elevated card background */
+  --card-surface: #ffffff;         /* Pure white surface */
+  --section-alt: #f1f5f9;          /* Slate 100 alternating section */
+  --border-color: #e2e8f0;         /* Slate 200 */
+  --border-focus: #cbd5e1;         /* Slate 300 */
+
+  --text-color: #0f172a;           /* Slate 900 primary text */
+  --text-light: #64748b;           /* Slate 500 secondary text */
+
+  /* --- Spacing Scale (4px/8px base grid) --- */
+  --space-1: 0.25rem;              /* 4px */
+  --space-2: 0.5rem;               /* 8px */
+  --space-3: 0.75rem;              /* 12px */
+  --space-4: 1rem;                 /* 16px */
+  --space-6: 1.5rem;               /* 24px */
+  --space-8: 2rem;                 /* 32px */
+  --space-12: 3rem;                /* 48px */
+
+  /* --- Elevation Hierarchy --- */
   --radius: 12px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --radius-sm: 8px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+
+  /* --- Typography Scale --- */
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.85rem;
+  --text-3xl: 2.5rem;
+
+  /* --- Mobile Usability --- */
+  --touch-target-min: 44px;
+}
+
+[data-theme='dark'] {
+  /* --- Brand & Accent Palette (Dark Mode calibrated) --- */
+  --primary: #f43f5e;              /* Vibrant Rose */
+  --primary-hover: #fb7185;
+  --primary-subtle: rgba(244, 63, 94, 0.15);
+
+  --accent: #6366f1;               /* Indigo 500 */
+  --accent-hover: #818cf8;
+  --accent-subtle: rgba(99, 102, 241, 0.15);
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+
+  /* --- Category Palette (Dark Mode Vibrancy) --- */
+  --cat-organize: #fb7185;
+  --cat-optimize: #34d399;
+  --cat-to-pdf: #60a5fa;
+  --cat-from-pdf: #22d3ee;
+  --cat-edit: #a78bfa;
+  --cat-security: #f87171;
+
+  /* --- Neutrals & Surfaces (Dark Slate) --- */
+  --bg-color: #0b0f19;             /* Midnight slate canvas */
+  --card-bg: #141c2e;              /* Elevated card background */
+  --card-surface: #141c2e;         /* Pure dark surface */
+  --section-alt: #0e1424;          /* Distinct alternating section */
+  --border-color: #243049;         /* Clean slate borders */
+  --border-focus: #3b82f6;
+
+  --text-color: #f8fafc;           /* Crisp slate white */
+  --text-light: #94a3b8;           /* Muted secondary text */
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.65);
 }
 
 * {
@@ -25,6 +113,7 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   line-height: 1.6;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 a {
@@ -61,20 +150,89 @@ a {
   transform: translateY(-1px);
 }
 
+.btn-outline {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 2px solid var(--border-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--card-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .btn-lg {
   padding: 16px 32px;
   font-size: 1.2rem;
 }
 
-/* Utilities */
-.text-center { text-align: center; }
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 8px; }
-.gap-4 { gap: 16px; }
-.mt-4 { margin-top: 16px; }
-.mb-4 { margin-bottom: 16px; }
-.fw-bold { font-weight: bold; }
+.text-muted {
+  color: var(--text-light);
+}
+
+/* Dark mode overrides for tool cards */
+[data-theme='dark'] .bg-white {
+  background-color: var(--card-surface) !important;
+}
+
+[data-theme='dark'] .bg-gray-50,
+[data-theme='dark'] .bg-gray-100 {
+  background-color: var(--card-bg) !important;
+}
+
+[data-theme='dark'] .text-gray-500,
+[data-theme='dark'] .text-gray-400 {
+  color: var(--text-light) !important;
+}
+
+[data-theme='dark'] .text-gray-700,
+[data-theme='dark'] .text-gray-800,
+[data-theme='dark'] .text-gray-600 {
+  color: var(--text-color) !important;
+}
+
+[data-theme='dark'] .border-gray-200,
+[data-theme='dark'] .border-gray-300 {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .border {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .shadow-sm {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: var(--text-light);
+}
+
+/* Alert styles */
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.alert-info {
+  background-color: #e0f2fe;
+  color: #075985;
+  border: 1px solid #bae6fd;
+}
+
+[data-theme='dark'] .alert-info {
+  background-color: #0c4a6e;
+  color: #bae6fd;
+  border-color: #075985;
+}

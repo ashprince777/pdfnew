@@ -1,58 +1,115 @@
 "use client";
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { Menu, Search, FileStack, Scissors, Minimize2 } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
+import CommandPalette from './CommandPalette';
+import MobileDrawer from './MobileDrawer';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setIsSearchOpen((prev) => !prev);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     return (
-        <nav className={styles.navbar}>
-            <div className={`container ${styles.navContainer}`}>
-                <Link href="/" className={styles.logo}>
-                    <span className={styles.icon}>PDF</span>
-                    Tools
-                </Link>
+        <>
+            <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ''}`}>
+                <div className={`container ${styles.navContainer}`}>
+                    {/* Brand */}
+                    <Link href="/" className={styles.logo}>
+                        <span className={styles.logoBadge}>PDF</span>
+                        <span>Tools</span>
+                    </Link>
 
-                {/* Desktop Menu */}
-                <div className={styles.desktopMenu}>
-                    <Link href="/merge-pdf" className={styles.navLink}>Merge PDF</Link>
-                    <Link href="/split-pdf" className={styles.navLink}>Split PDF</Link>
-                    <Link href="/compress-pdf" className={styles.navLink}>Compress PDF</Link>
-                    <div className={styles.dropdown}>
-                        <button className={styles.navLink}>
-                            Convert PDF <ChevronDown size={14} />
+                    {/* Desktop Menu */}
+                    <div className={styles.desktopMenu}>
+                        <button
+                            className={styles.searchTrigger}
+                            onClick={() => setIsSearchOpen(true)}
+                            aria-label="Search all PDF tools"
+                        >
+                            <Search size={14} style={{ color: 'var(--primary)' }} />
+                            <span>Quick Search</span>
+                            <span className={styles.searchKbd}>Ctrl+K</span>
                         </button>
-                        <div className={styles.dropdownContent}>
-                            <Link href="/jpg-to-pdf">JPG to PDF</Link>
-                            <Link href="/word-to-pdf">Word to PDF</Link>
-                            <Link href="/powerpoint-to-pdf">PowerPoint to PDF</Link>
-                            <Link href="/excel-to-pdf">Excel to PDF</Link>
-                            <Link href="/html-to-pdf">HTML to PDF</Link>
-                        </div>
+
+                        <Link href="/merge-pdf" className={styles.navLink}>
+                            <FileStack size={16} style={{ color: 'var(--cat-organize)' }} />
+                            <span>Merge</span>
+                        </Link>
+                        <Link href="/split-pdf" className={styles.navLink}>
+                            <Scissors size={16} style={{ color: 'var(--cat-organize)' }} />
+                            <span>Split</span>
+                        </Link>
+                        <Link href="/compress-pdf" className={styles.navLink}>
+                            <Minimize2 size={16} style={{ color: 'var(--cat-optimize)' }} />
+                            <span>Compress</span>
+                        </Link>
+
+                        <Link href="/all-tools" className={styles.btnAll}>
+                            All 22+ Tools
+                        </Link>
+
+                        <ThemeToggle />
                     </div>
-                    <Link href="/all-tools" className={`${styles.navLink} ${styles.btnAll}`}>All PDF Tools</Link>
+
+                    {/* Mobile Controls */}
+                    <div className={styles.mobileControls}>
+                        <button
+                            className={styles.mobileBtn}
+                            onClick={() => setIsSearchOpen(true)}
+                            aria-label="Search PDF tools"
+                        >
+                            <Search size={20} />
+                        </button>
+
+                        <ThemeToggle />
+
+                        <button
+                            className={styles.mobileBtn}
+                            onClick={() => setIsDrawerOpen(true)}
+                            aria-label="Open navigation menu"
+                        >
+                            <Menu size={22} />
+                        </button>
+                    </div>
                 </div>
+            </nav>
 
-                {/* Mobile Menu Button */}
-                <button className={styles.mobileToggle} onClick={() => setIsOpen(!isOpen)}>
-                    {isOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+            {/* Command Palette / Search Dialog */}
+            <CommandPalette
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+            />
 
-                {/* Mobile Menu */}
-                {isOpen && (
-                    <div className={styles.mobileMenu}>
-                        <Link href="/merge-pdf" onClick={() => setIsOpen(false)}>Merge PDF</Link>
-                        <Link href="/split-pdf" onClick={() => setIsOpen(false)}>Split PDF</Link>
-                        <Link href="/compress-pdf" onClick={() => setIsOpen(false)}>Compress PDF</Link>
-                        <div className={styles.mobileDivider}>Convert</div>
-                        <Link href="/jpg-to-pdf" onClick={() => setIsOpen(false)}>JPG to PDF</Link>
-                        <Link href="/word-to-pdf" onClick={() => setIsOpen(false)}>Word to PDF</Link>
-                        <Link href="/all-tools" onClick={() => setIsOpen(false)}>All Tools</Link>
-                    </div>
-                )}
-            </div>
-        </nav>
+            {/* Mobile Drawer Navigation */}
+            <MobileDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                onOpenSearch={() => setIsSearchOpen(true)}
+            />
+        </>
     );
 }

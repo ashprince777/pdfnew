@@ -52,7 +52,6 @@ export default function ToolSeoContent({
             </ul>
 
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Frequently Asked Questions</h2>
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Frequently Asked Questions</h2>
             <Accordion items={faqItems} />
         </div>
     );

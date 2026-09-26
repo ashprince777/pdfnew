@@ -34,6 +34,7 @@ export default function RepairClient() {
             const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
             const url = URL.createObjectURL(blob);
             setDownloadUrl(url);
             setStatus('DONE');
@@ -45,6 +46,7 @@ export default function RepairClient() {
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFile(null); setStatus('IDLE'); setDownloadUrl(null);
     };
 

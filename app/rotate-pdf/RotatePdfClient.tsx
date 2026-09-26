@@ -5,6 +5,8 @@ import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import { FileText, RotateCw, Trash2, ArrowRight } from 'lucide-react';
 
+import { PDFDocument, degrees } from 'pdf-lib';
+
 export default function RotatePdfClient() {
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
@@ -28,14 +30,33 @@ export default function RotatePdfClient() {
         if (!file) return;
         setStatus('PROCESSING');
 
-        // Simulating the actual rotation save
-        setTimeout(() => {
-            alert("Rotation applied currently only in preview (Simulation). Saving functionality coming soon.");
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+            const pages = pdfDoc.getPages();
+
+            pages.forEach((page) => {
+                const currentAngle = page.getRotation().angle;
+                page.setRotation(degrees((currentAngle + rotation) % 360));
+            });
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+
+            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+
+            const url = URL.createObjectURL(blob);
+            setDownloadUrl(url);
+            setStatus('DONE');
+        } catch (error) {
+            console.error('Error rotating PDF:', error);
+            alert('Failed to rotate PDF. Please try again.');
             setStatus('IDLE');
-        }, 1500);
+        }
     };
 
     const reset = () => {
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
         setFile(null);
         setStatus('IDLE');
         setDownloadUrl(null);
@@ -101,8 +122,9 @@ export default function RotatePdfClient() {
             {status === 'DONE' && downloadUrl && (
                 <DownloadResult
                     downloadUrl={downloadUrl}
-                    downloadFilename="rotated.pdf"
+                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}_rotated.pdf`}
                     onReset={reset}
+                    message="Your rotated PDF is ready!"
                 />
             )}
         </div>

@@ -10,7 +10,8 @@
     display: flex;
     justify-content: space-between;
     padding: 16px;
-    background: white;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
     align-items: center;
@@ -36,6 +37,8 @@
 .input {
     padding: 12px;
     border-radius: var(--radius);
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-color);
     font-size: 1.1rem;
 }

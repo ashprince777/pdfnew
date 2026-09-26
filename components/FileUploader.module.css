@@ -1,54 +1,112 @@
 .uploader {
     background-color: var(--card-bg);
-    border: 2px dashed #ccc;
-    border-radius: 20px;
-    padding: 60px 20px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius);
+    padding: 48px 20px;
     text-align: center;
     transition: all 0.2s ease;
     cursor: pointer;
-    min-height: 300px;
+    min-height: 280px;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .uploader:hover,
 .dragging {
-    background-color: #fcebeb;
-    /* Light red tint */
+    background-color: var(--primary-subtle);
     border-color: var(--primary);
+}
+
+.errorState {
+    background-color: rgba(239, 68, 68, 0.05) !important;
+    border-color: var(--error) !important;
 }
 
 .content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    pointer-events: none;
-    /* Let clicks pass through to container/label if needed, but we use label for button */
+    max-width: 520px;
+    width: 100%;
 }
 
-.content * {
-    pointer-events: auto;
-}
-
-.icon {
+.iconWrapper {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: var(--primary-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--primary);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    transition: transform 0.2s ease;
+}
+
+.uploader:hover .iconWrapper {
+    transform: scale(1.08);
 }
 
 .title {
-    font-size: 1.8rem;
-    font-weight: 700;
+    font-size: var(--text-2xl);
+    font-weight: 800;
     margin-bottom: 8px;
+    color: var(--text-color);
+    line-height: 1.25;
 }
 
 .subtitle {
     color: var(--text-light);
-    font-size: 1.1rem;
+    font-size: var(--text-base);
+    margin-bottom: 24px;
+}
+
+.hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--text-light);
+    margin-top: 16px;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+}
+
+.errorBox {
+    background: var(--card-bg);
+    border: 1px solid var(--error);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 480px;
 }
 
 .hiddenInput {
     display: none;
+}
+
+@media (max-width: 640px) {
+    .uploader {
+        padding: 36px 16px;
+        min-height: 240px;
+    }
+
+    .title {
+        font-size: 1.4rem;
+    }
+
+    .subtitle {
+        font-size: 0.95rem;
+        margin-bottom: 18px;
+    }
 }

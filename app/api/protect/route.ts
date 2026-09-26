@@ -27,10 +27,7 @@ export async function POST(req: NextRequest) {
         // Using require to avoid missing type definition errors
         const { encryptPDF } = require('@pdfsmaller/pdf-encrypt-lite');
 
-        const encryptedPdfBytes = await encryptPDF(cleanPdfBytes, {
-            ownerPassword: password,
-            userPassword: password,
-        });
+        const encryptedPdfBytes = await encryptPDF(cleanPdfBytes, password, password);
 
         return new NextResponse(encryptedPdfBytes, {
             status: 200,
