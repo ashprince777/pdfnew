@@ -1,215 +1,123 @@
 "use client";
 import { useState } from 'react';
+import { rgb } from '@cantoo/pdf-lib';
+import { Hash, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Hash, ArrowRight, Trash2 } from 'lucide-react';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { baseName, embedUnicodeFont, getVisualFrame, loadPdf, savePdf } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type Position = 'top_left' | 'top_center' | 'top_right' | 'bottom_left' | 'bottom_center' | 'bottom_right';
+type Format = 'number' | 'page_x' | 'page_x_of_y' | 'x_slash_y';
+
+const POSITIONS: { value: Position; title: string }[] = [
+    { value: 'top_left', title: 'Top Left' },
+    { value: 'top_center', title: 'Top Center' },
+    { value: 'top_right', title: 'Top Right' },
+    { value: 'bottom_left', title: 'Bottom Left' },
+    { value: 'bottom_center', title: 'Bottom Center' },
+    { value: 'bottom_right', title: 'Bottom Right' },
+];
+
+const MARGIN = 28;
 
 export default function PageNumbersClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [position, setPosition] = useState<'bottom_right' | 'bottom_center' | 'bottom_left' | 'top_right' | 'top_center' | 'top_left'>('bottom_right');
-    const [format, setFormat] = useState<'number' | 'page_x' | 'page_x_of_y' | 'x_slash_y'>('page_x_of_y');
-    const [startNum, setStartNum] = useState<number>(1);
-    const [fontSize, setFontSize] = useState<number>(11);
+    const [position, setPosition] = useState<Position>('bottom_center');
+    const [format, setFormat] = useState<Format>('page_x_of_y');
+    const [startNum, setStartNum] = useState(1);
+    const [fontSize, setFontSize] = useState(11);
+    const [skipFirst, setSkipFirst] = useState(false);
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) setFile(newFiles[0]);
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    const addNumbers = async () => {
+    const addNumbers = () => {
         if (!file) return;
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
+            const font = await embedUnicodeFont(pdfDoc);
+            const pages = pdfDoc.getPages();
+            const numbered = skipFirst ? pages.slice(1) : pages;
+            const last = startNum + numbered.length - 1;
 
-        setStatus('PROCESSING');
+            numbered.forEach((page, i) => {
+                const n = startNum + i;
+                const text =
+                    format === 'page_x' ? `Page ${n}` : format === 'page_x_of_y' ? `Page ${n} of ${last}` : format === 'x_slash_y' ? `${n} / ${last}` : `${n}`;
 
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-            const totalPages = pdfDoc.getPageCount();
-
-            for (let i = 0; i < totalPages; i++) {
-                const page = pdfDoc.getPage(i);
-                const { width, height } = page.getSize();
-                const curNum = startNum + i;
-                const totalEnd = startNum + totalPages - 1;
-
-                let text = `${curNum}`;
-                if (format === 'page_x') text = `Page ${curNum}`;
-                else if (format === 'page_x_of_y') text = `Page ${curNum} of ${totalEnd}`;
-                else if (format === 'x_slash_y') text = `${curNum} / ${totalEnd}`;
-
+                const frame = getVisualFrame(page);
                 const textWidth = font.widthOfTextAtSize(text, fontSize);
-                const margin = 36;
-                let x = margin;
-                let y = margin;
+                const [vertical, horizontal] = position.split('_');
+                const x = horizontal === 'left' ? MARGIN : horizontal === 'center' ? (frame.width - textWidth) / 2 : frame.width - textWidth - MARGIN;
+                const y = vertical === 'top' ? frame.height - MARGIN - fontSize : MARGIN;
+                const origin = frame.toPdf(x, y);
 
-                switch (position) {
-                    case 'bottom_left':
-                        x = margin;
-                        y = margin;
-                        break;
-                    case 'bottom_center':
-                        x = (width - textWidth) / 2;
-                        y = margin;
-                        break;
-                    case 'bottom_right':
-                        x = width - textWidth - margin;
-                        y = margin;
-                        break;
-                    case 'top_left':
-                        x = margin;
-                        y = height - margin - fontSize;
-                        break;
-                    case 'top_center':
-                        x = (width - textWidth) / 2;
-                        y = height - margin - fontSize;
-                        break;
-                    case 'top_right':
-                        x = width - textWidth - margin;
-                        y = height - margin - fontSize;
-                        break;
-                }
+                page.drawText(text, { ...origin, size: fontSize, font, color: rgb(0.2, 0.2, 0.2), rotate: frame.rotate });
+            });
 
-                page.drawText(text, {
-                    x,
-                    y,
-                    size: fontSize,
-                    font,
-                    color: rgb(0.2, 0.2, 0.2),
-                });
-            }
-
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error adding page numbers:', error);
-            alert('Failed to add page numbers. Please try again.');
-            setStatus('IDLE');
-        }
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_numbered.pdf` };
+        }, 'Failed to add page numbers. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Add Page Numbers to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Insert page numbers into your PDF document with customizable formatting and position.</p>
-            </div>
+            <ToolHeader title="Add Page Numbers to PDF" subtitle="Insert page numbers into your PDF with customizable formatting and position." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-blue-100 p-3 rounded-lg">
-                                <Hash className="text-blue-600 w-8 h-8" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button onClick={removeFile} className="text-gray-400 hover:text-red-500">
-                            <Trash2 />
-                        </button>
-                    </div>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={Hash} />
 
-                    {/* Options Panel */}
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 space-y-5">
-                        <h3 className="font-semibold text-gray-800 text-lg border-b pb-2">Page Number Settings</h3>
+                    <OptionsCard title="Position on page">
+                        <ChoiceGroup label="Position" options={POSITIONS} value={position} onChange={setPosition} />
+                    </OptionsCard>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Position on Page</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { id: 'top_left', label: 'Top Left' },
-                                    { id: 'top_center', label: 'Top Center' },
-                                    { id: 'top_right', label: 'Top Right' },
-                                    { id: 'bottom_left', label: 'Bottom Left' },
-                                    { id: 'bottom_center', label: 'Bottom Center' },
-                                    { id: 'bottom_right', label: 'Bottom Right' },
-                                ].map((pos) => (
-                                    <button
-                                        key={pos.id}
-                                        type="button"
-                                        onClick={() => setPosition(pos.id as any)}
-                                        className={`p-2 text-sm rounded border text-center transition-all ${
-                                            position === pos.id
-                                                ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
-                                                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {pos.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Number Format</label>
-                                <select
-                                    value={format}
-                                    onChange={(e) => setFormat(e.target.value as any)}
-                                    className="w-full p-2.5 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
+                    <OptionsCard title="Format">
+                        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                            <div className={toolStyles.field}>
+                                <label className={toolStyles.label} htmlFor="pn-format">Number format</label>
+                                <select id="pn-format" value={format} onChange={(e) => setFormat(e.target.value as Format)} className={toolStyles.input}>
                                     <option value="number">1, 2, 3...</option>
                                     <option value="page_x">Page 1, Page 2...</option>
                                     <option value="page_x_of_y">Page 1 of N</option>
                                     <option value="x_slash_y">1 / N</option>
                                 </select>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Start Numbering At</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={startNum}
-                                    onChange={(e) => setStartNum(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
+                            <div className={toolStyles.field}>
+                                <label className={toolStyles.label} htmlFor="pn-start">Start numbering at</label>
+                                <input id="pn-start" type="number" min={1} value={startNum} onChange={(e) => setStartNum(Math.max(1, parseInt(e.target.value) || 1))} className={toolStyles.input} />
+                            </div>
+                            <div className={toolStyles.field}>
+                                <label className={toolStyles.label} htmlFor="pn-size">Font size (pt)</label>
+                                <input id="pn-size" type="number" min={6} max={48} value={fontSize} onChange={(e) => setFontSize(Math.min(48, Math.max(6, parseInt(e.target.value) || 11)))} className={toolStyles.input} />
                             </div>
                         </div>
-                    </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={skipFirst} onChange={(e) => setSkipFirst(e.target.checked)} style={{ width: 18, height: 18 }} />
+                            <span>Don&apos;t number the first page (cover)</span>
+                        </label>
+                    </OptionsCard>
 
-                    <button
-                        onClick={addNumbers}
-                        className="w-full btn btn-primary btn-lg flex items-center justify-center gap-2"
-                    >
+                    <PrimaryAction onClick={addNumbers}>
                         Add Page Numbers <ArrowRight size={20} />
-                    </button>
-                </div>
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Adding page numbers..." />}
+            {tool.status === 'PROCESSING' && <Processing status="Adding page numbers..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`numbered_${file?.name}`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
                     message="Page numbers added successfully!"
                 />

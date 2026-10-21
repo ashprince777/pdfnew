@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'PDF to PowerPoint Converter - Convert PDF to PPTX Online | MyOnlinePDF',
+    title: 'PDF to PowerPoint Converter - Convert PDF to PPTX Online',
     description: 'Convert your PDF files to editable PowerPoint presentations (PPTX) online for free. No registration needed.',
     keywords: ['pdf to powerpoint', 'pdf to pptx', 'convert pdf to pptx', 'free pdf converter'],
     alternates: {

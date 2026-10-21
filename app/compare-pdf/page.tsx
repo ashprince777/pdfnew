@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Compare PDF Online Free - Find Differences in PDF Documents | MyOnlinePDF',
+    title: 'Compare PDF Online Free - Find Differences in PDF Documents',
     description: 'Compare two PDF documents side by side to detect text changes, additions, and deletions online for free. Fast, private, and secure.',
     alternates: {
         canonical: '/compare-pdf',

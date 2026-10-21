@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Repair PDF Online - Fix Corrupted PDF Files | MyOnlinePDF',
+    title: 'Repair PDF Online - Fix Corrupted PDF Files',
     description: 'Recover and repair damaged PDF files online. Fix corrupted documents for free. No software installation required.',
     alternates: {
         canonical: '/repair-pdf',

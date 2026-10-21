@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToWordClient from './PdfToWordClient';
 
 export const metadata: Metadata = {
-    title: 'PDF to Word Converter - Convert PDF to Docx Online | MyOnlinePDF',
+    title: 'PDF to Word Converter - Convert PDF to Docx Online',
     description: 'Convert PDF files to editable Microsoft Word documents (Docx) online. accurate conversion with original formatting preserved.',
     alternates: {
         canonical: '/pdf-to-word',

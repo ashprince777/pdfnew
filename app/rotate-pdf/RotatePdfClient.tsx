@@ -1,128 +1,130 @@
 "use client";
 import { useState } from 'react';
+import { degrees } from '@cantoo/pdf-lib';
+import { FileText, RotateCw, RotateCcw, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { FileText, RotateCw, Trash2, ArrowRight } from 'lucide-react';
-
-import { PDFDocument, degrees } from 'pdf-lib';
+import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { baseName, loadPdf, PdfToolError, savePdf } from '@/lib/pdf';
+import { usePdfThumbnails } from '@/lib/usePdfThumbnails';
+import { useToolRunner } from '@/lib/useToolRunner';
+import grid from '@/components/PageGrid.module.css';
 
 export default function RotatePdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [rotation, setRotation] = useState(0);
+    /** Extra clockwise rotation per page, indexed by 0-based page index. */
+    const [rotations, setRotations] = useState<number[]>([]);
+    const tool = useToolRunner();
+    const { thumbnails } = usePdfThumbnails(tool.status === 'DONE' ? null : file);
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) setFile(newFiles[0]);
+    const handleFilesSelected = (files: File[]) => {
+        const selected = files[0];
+        if (!selected) return;
+        loadPdf(selected)
+            .then((doc) => {
+                setFile(selected);
+                setRotations(new Array(doc.getPageCount()).fill(0));
+            })
+            .catch((err) => tool.notify(err instanceof PdfToolError ? err.message : 'Could not open this PDF.'));
     };
 
-    const removeFile = () => {
-        setFile(null);
-        setRotation(0);
-    };
+    const rotateAll = (delta: number) => setRotations((prev) => prev.map((r) => (r + delta + 360) % 360));
+    const rotateOne = (index: number, delta: number) =>
+        setRotations((prev) => prev.map((r, i) => (i === index ? (r + delta + 360) % 360 : r)));
 
-    const rotateAll = () => {
-        setRotation((prev) => (prev + 90) % 360);
-    };
+    const hasChanges = rotations.some((r) => r !== 0);
 
-    const applyRotation = async () => {
+    const applyRotation = () => {
         if (!file) return;
-        setStatus('PROCESSING');
-
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const pages = pdfDoc.getPages();
-
-            pages.forEach((page) => {
-                const currentAngle = page.getRotation().angle;
-                page.setRotation(degrees((currentAngle + rotation) % 360));
+        if (!hasChanges) return tool.notify('Rotate at least one page first.');
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
+            pdfDoc.getPages().forEach((page, i) => {
+                if (rotations[i]) page.setRotation(degrees((page.getRotation().angle + rotations[i]) % 360));
             });
-
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error rotating PDF:', error);
-            alert('Failed to rotate PDF. Please try again.');
-            setStatus('IDLE');
-        }
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_rotated.pdf` };
+        }, 'Failed to rotate PDF. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setRotation(0);
+        setRotations([]);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Rotate PDF</h1>
-                <p className="text-muted mb-8 text-lg">Rotate your PDF pages permanently.</p>
-            </div>
+            <ToolHeader title="Rotate PDF" subtitle="Rotate all pages at once, or click individual pages to rotate them permanently." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={handleFilesSelected} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                        <div className="flex items-center justify-between mb-6 border-b pb-4">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-blue-100 p-2 rounded-lg">
-                                    <FileText className="text-blue-600 w-6 h-6" />
-                                </div>
-                                <span className="font-medium">{file.name}</span>
-                            </div>
-                            <button onClick={removeFile} className="text-gray-400 hover:text-red-500">
-                                <Trash2 />
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace wide>
+                    <SelectedFile file={file} onRemove={reset} detail={`${rotations.length} pages`} />
+
+                    <div className={grid.toolbar}>
+                        <p className={toolStyles.hint} style={{ fontSize: 'var(--text-sm)' }}>Click a page to rotate it 90° clockwise.</p>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button type="button" className="btn btn-outline" style={{ gap: 6 }} onClick={() => rotateAll(-90)}>
+                                <RotateCcw size={18} /> Rotate all left
                             </button>
-                        </div>
-
-                        <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded border-2 border-dashed mb-6">
-                            <div
-                                className="transition-transform duration-300"
-                                style={{ transform: `rotate(${rotation}deg)` }}
-                            >
-                                <FileText size={80} className="text-gray-400" />
-                            </div>
-                            <p className="mt-4 text-gray-500">Preview Rotation: {rotation}°</p>
-                        </div>
-
-                        <div className="flex justify-center gap-4">
-                            <button
-                                onClick={rotateAll}
-                                className="btn btn-outline flex items-center gap-2"
-                            >
-                                <RotateCw size={18} /> Rotate Right
+                            <button type="button" className="btn btn-outline" style={{ gap: 6 }} onClick={() => rotateAll(90)}>
+                                <RotateCw size={18} /> Rotate all right
                             </button>
-                            <button
-                                onClick={applyRotation}
-                                className="btn btn-primary flex items-center gap-2"
-                            >
-                                Save PDF <ArrowRight size={18} />
-                            </button>
+                            {hasChanges && (
+                                <button type="button" className="btn btn-outline" onClick={() => setRotations((prev) => prev.map(() => 0))}>
+                                    Reset
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
+
+                    <div className={grid.grid}>
+                        {rotations.map((rotation, index) => (
+                            <button
+                                key={index}
+                                type="button"
+                                className={grid.tile}
+                                onClick={() => rotateOne(index, 90)}
+                                aria-label={`Page ${index + 1}, rotated ${rotation} degrees. Click to rotate clockwise.`}
+                            >
+                                <div className={grid.thumb}>
+                                    {thumbnails[index + 1] ? (
+                                        // eslint-disable-next-line @next/next/no-img-element -- local blob: URL
+                                        <img src={thumbnails[index + 1]} alt="" style={{ transform: `rotate(${rotation}deg)` }} />
+                                    ) : (
+                                        <div className={grid.thumbPlaceholder}>
+                                            <FileText size={28} />
+                                            <span>Page {index + 1}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={grid.tileFooter}>
+                                    <span>Page {index + 1}</span>
+                                    <span style={{ color: rotation ? 'var(--primary)' : 'var(--text-light)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <RotateCw size={12} /> {rotation}°
+                                    </span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ maxWidth: 480, width: '100%', margin: '0 auto' }}>
+                        <PrimaryAction onClick={applyRotation} disabled={!hasChanges}>
+                            Save PDF <ArrowRight size={20} />
+                        </PrimaryAction>
+                    </div>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Rotating pages..." />}
+            {tool.status === 'PROCESSING' && <Processing status="Rotating pages..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}_rotated.pdf`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
                     message="Your rotated PDF is ready!"
                 />

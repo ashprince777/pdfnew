@@ -1,0 +1,229 @@
+.header {
+    text-align: center;
+    margin: 32px auto 28px;
+    max-width: 760px;
+}
+
+.title {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.subtitle {
+    color: var(--text-light);
+    font-size: var(--text-lg);
+}
+
+.workspace {
+    max-width: 720px;
+    margin: 0 auto 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.workspaceWide {
+    max-width: 1100px;
+}
+
+.card {
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+}
+
+.fileCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.fileMeta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.fileIcon {
+    flex-shrink: 0;
+    display: flex;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.fileName {
+    font-weight: 600;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fileDetail {
+    font-size: var(--text-sm);
+    color: var(--text-light);
+}
+
+.iconButton {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+
+.iconButton:hover {
+    color: var(--error);
+    background: var(--section-alt);
+}
+
+.iconButton:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.sectionTitle {
+    font-weight: 700;
+    font-size: var(--text-base);
+    color: var(--text-color);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.hint {
+    font-size: var(--text-xs);
+    color: var(--text-light);
+}
+
+.input {
+    width: 100%;
+    min-height: var(--touch-target-min);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: var(--text-base);
+}
+
+.input:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+.choiceGrid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.choice {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: var(--text-sm);
+}
+
+.choice:hover {
+    border-color: var(--border-focus);
+}
+
+.choiceActive {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.choiceTitle {
+    font-weight: 700;
+}
+
+.choiceText {
+    color: var(--text-light);
+    font-size: var(--text-xs);
+}
+
+.actionRow {
+    display: flex;
+    justify-content: center;
+}
+
+.primaryAction {
+    width: 100%;
+    gap: 10px;
+}
+
+.primaryAction:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.notice {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    background: var(--accent-subtle);
+    color: var(--text-color);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.noticeWarning {
+    background: color-mix(in srgb, var(--warning) 14%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 45%, transparent);
+}
+
+@media (max-width: 480px) {
+    .card {
+        padding: 14px;
+    }
+    .fileIcon {
+        display: none;
+    }
+    .iconButton {
+        min-width: 36px;
+        padding: 0 4px;
+    }
+}

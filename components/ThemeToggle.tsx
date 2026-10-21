@@ -8,15 +8,13 @@ export default function ThemeToggle() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        const savedTheme = getStoredTheme();
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        } else if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setTheme('dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
+        // The inline script in app/layout.tsx has already applied the theme before paint.
+        const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : getStoredTheme() ?? 'light';
+        const timer = setTimeout(() => {
+            setTheme(current);
+            setMounted(true);
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     const toggleTheme = () => {

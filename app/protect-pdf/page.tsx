@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Protect PDF Online - Encrypt PDF with Password | MyOnlinePDF',
+    title: 'Protect PDF Online - Encrypt PDF with Password',
     description: 'Secure your PDF files with a password. Protect sensitive documents online with strong encryption. Fast, secure, and free.',
     alternates: {
         canonical: '/protect-pdf',
@@ -19,15 +19,15 @@ const faqItems = [
     },
     {
         question: 'Is it secure?',
-        answer: 'Yes. We use standard PDF encryption methods. While this tool runs on our secure server, your files are deleted immediately after processing. No inputs are stored.'
+        answer: 'Yes. Your PDF is encrypted with AES-256, the strongest standard PDF encryption, directly in your browser. The file and the password never leave your device.'
     },
     {
         question: 'Can I remove the password later?',
-        answer: 'Yes, if you know the password, you can use our Unlock PDF tool (coming soon) or simply Print to PDF to remove protection.'
+        answer: 'Yes. If you know the password, use our Unlock PDF tool to remove it while keeping the text, links and bookmarks intact.'
     },
     {
         question: 'Does this run in the browser?',
-        answer: 'Unlike our other tools, encryption requires secure server-side processing to ensure compatibility. However, all data transmission is encrypted via HTTPS.'
+        answer: 'Yes. Like every MyOnlinePDF tool, encryption runs entirely in your browser. Nothing is uploaded to a server.'
     }
 ];
 

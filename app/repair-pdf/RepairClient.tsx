@@ -1,72 +1,110 @@
 "use client";
-import React, { useState } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import { useState } from 'react';
+import { PDFDocument } from '@cantoo/pdf-lib';
+import { ShieldCheck, Wrench } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { ShieldCheck, ArrowRight, Trash2 } from 'lucide-react';
-import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import FaqSchema from '@/components/FaqSchema';
-import ToolSeoContent from '@/components/ToolSeoContent';
+import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName, PdfToolError, pdfBytesToBlob } from '@/lib/pdf';
+import { openPdfjsDocument, renderPageToCanvas, canvasToBlob, releaseCanvas } from '@/lib/pdfjs';
+import { useToolRunner } from '@/lib/useToolRunner';
 
-// Note: In Client Components, metadata export is not supported. 
-// For full SEO, we should ideally wrap this. But for speed/user request, we'll keep it simple or do the layout.js pattern.
-// Let's stick to the Pattern: page.tsx (Server) -> ClientComponent. 
-// But here I'll combine for speed as user just wants pages. 
-// WAIT: I should stick to the pattern I established (page.tsx = Server, Client.tsx = Client) to get the metadata.
-// I'll write this file as the CLIENT component for Repair, then write the page.tsx.
+/** Re-parses every object (ignoring a broken xref table) and writes a clean file. */
+async function rebuildStructure(bytes: Uint8Array): Promise<Uint8Array | null> {
+    try {
+        const doc = await PDFDocument.load(bytes, { updateMetadata: false, throwOnInvalidObject: false });
+        if (doc.isEncrypted) throw new PdfToolError('This PDF is encrypted. Unlock it first with the Unlock PDF tool, then repair it.', 'ENCRYPTED');
+        if (doc.getPageCount() === 0) return null;
+        return await doc.save();
+    } catch (error) {
+        if (error instanceof PdfToolError) throw error;
+        return null;
+    }
+}
+
+/** Last resort: let pdf.js (very tolerant of damage) render each page and rebuild from images. */
+async function rebuildFromRender(bytes: Uint8Array, onProgress: (message: string) => void): Promise<Uint8Array> {
+    const src = await openPdfjsDocument(bytes);
+    const out = await PDFDocument.create();
+    let rendered = 0;
+    for (let i = 1; i <= src.numPages; i++) {
+        onProgress(`Recovering page ${i} of ${src.numPages}...`);
+        try {
+            const page = await src.getPage(i);
+            const canvas = await renderPageToCanvas(page, 2);
+            const jpeg = await canvasToBlob(canvas, 'image/jpeg', 0.9);
+            releaseCanvas(canvas);
+            const image = await out.embedJpg(await jpeg.arrayBuffer());
+            const { width, height } = page.getViewport({ scale: 1 });
+            out.addPage([width, height]).drawImage(image, { x: 0, y: 0, width, height });
+            rendered++;
+        } catch (error) {
+            console.warn(`Page ${i} could not be recovered`, error);
+        }
+    }
+    await src.destroy();
+    if (rendered === 0) throw new PdfToolError('No pages could be recovered. The file is too damaged to repair.');
+    return out.save();
+}
 
 export default function RepairClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [message, setMessage] = useState('');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (files: File[]) => {
-        if (files.length > 0) setFile(files[0]);
-    };
-
-    const repairPdf = async () => {
+    const repairPdf = () => {
         if (!file) return;
-        setStatus('PROCESSING');
-        try {
-            // "Repair" by loading (which fixes XRef) and saving.
-            const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error repairing:', error);
-            alert('Could not repair this file. It may be too damaged.');
-            setStatus('IDLE');
-        }
+        tool.run(async () => {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            tool.setProgress('Rebuilding PDF structure...');
+            let repaired = await rebuildStructure(bytes);
+            if (repaired) {
+                setMessage('PDF repaired! The document structure was rebuilt; text and links are preserved.');
+            } else {
+                repaired = await rebuildFromRender(bytes, tool.setProgress);
+                setMessage('PDF recovered! The structure was too damaged, so pages were rebuilt as images (text is not selectable).');
+            }
+            return { blob: pdfBytesToBlob(repaired), filename: `${baseName(file.name)}_repaired.pdf` };
+        }, 'Could not repair this file. It may be too damaged.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-        setFile(null); setStatus('IDLE'); setDownloadUrl(null);
+        tool.reset();
+        setFile(null);
+        setMessage('');
     };
 
     return (
-        <div className="container text-center">
-            <h1 className="text-4xl font-bold mt-8 mb-4">Repair PDF</h1>
-            <p className="text-muted mb-8">Recover data from a corrupted or damaged PDF document.</p>
+        <div className="container">
+            <ToolHeader title="Repair PDF" subtitle="Recover a corrupted or damaged PDF document that won't open properly." />
 
-            {status === 'IDLE' && !file && <FileUploader onFilesSelected={handleFilesSelected} />}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-md mx-auto bg-gray-50 p-6 rounded-lg mt-8">
-                    <p className="mb-4 font-semibold">{file.name}</p>
-                    <button onClick={repairPdf} className="btn btn-primary w-full">Repair PDF</button>
-                    <button onClick={reset} className="text-sm text-gray-500 mt-4 underline">Change File</button>
-                </div>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={ShieldCheck} />
+                    <Notice>
+                        We first rebuild the file&apos;s internal structure (keeping text and links). If that is not possible,
+                        we recover each readable page as an image.
+                    </Notice>
+                    <PrimaryAction onClick={repairPdf}>
+                        <Wrench size={20} /> Repair PDF
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Repairing PDF..." />}
-            {status === 'DONE' && downloadUrl && <DownloadResult downloadUrl={downloadUrl} downloadFilename={`repaired_${file?.name}`} onReset={reset} />}
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Repairing PDF...'} />}
+
+            {tool.status === 'DONE' && tool.result && (
+                <DownloadResult
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
+                    onReset={reset}
+                    message={message}
+                />
+            )}
         </div>
     );
 }

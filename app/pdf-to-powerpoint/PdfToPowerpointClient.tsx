@@ -1,134 +1,97 @@
 "use client";
 import { useState } from 'react';
+import { Presentation, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Presentation, ArrowRight } from 'lucide-react';
+import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName } from '@/lib/pdf';
+import { canvasToBlob, openPdfjsDocument, releaseCanvas, renderPageToCanvas } from '@/lib/pdfjs';
+import { useToolRunner } from '@/lib/useToolRunner';
+import { removeDanglingContentTypes } from '@/lib/ooxml';
+import JSZip from 'jszip';
+
+const SLIDE_WIDTH_IN = 10;
+const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
 
 export default function PdfToPowerpointClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [filename, setFilename] = useState('');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (files: File[]) => {
-        if (files.length > 0) setFile(files[0]);
-    };
-
-    const convertToPpt = async () => {
+    const convertToPpt = () => {
         if (!file) return;
-        setStatus('PROCESSING');
-
-        try {
-            // Dynamic import to avoid SSR issues
-            const pdfjsLib = await import('pdfjs-dist');
-            // @ts-ignore
-            const PptxGenJS = (await import('pptxgenjs')).default;
+        tool.run(async () => {
+            const [{ default: PptxGenJS }, pdfDoc] = await Promise.all([import('pptxgenjs'), openPdfjsDocument(await file.arrayBuffer())]);
             const pptx = new PptxGenJS();
 
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+            // Match the slide shape to the first page so pages are not stretched.
+            const first = (await pdfDoc.getPage(1)).getViewport({ scale: 1 });
+            const slideHeight = SLIDE_WIDTH_IN * (first.height / first.width);
+            pptx.defineLayout({ name: 'PDF', width: SLIDE_WIDTH_IN, height: slideHeight });
+            pptx.layout = 'PDF';
 
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdfDoc = await loadingTask.promise;
-            const totalPages = pdfDoc.numPages;
-
-            for (let i = 1; i <= totalPages; i++) {
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                tool.setProgress(`Converting page ${i} of ${pdfDoc.numPages}...`);
                 const page = await pdfDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 1.5 });
+                const base = page.getViewport({ scale: 1 });
+                const canvas = await renderPageToCanvas(page, 2);
+                const data = await blobToDataUrl(await canvasToBlob(canvas, 'image/jpeg', 0.85));
+                releaseCanvas(canvas);
+                page.cleanup();
 
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                if (context) {
-                    await page.render({ canvasContext: context, viewport } as any).promise;
-
-                    const imgData = canvas.toDataURL('image/jpeg', 0.8);
-
-                    const slide = pptx.addSlide();
-                    slide.addImage({
-                        data: imgData,
-                        x: 0,
-                        y: 0,
-                        w: '100%',
-                        h: '100%'
-                    });
-                }
+                // Fit (contain) pages whose shape differs from the first one.
+                const scale = Math.min(SLIDE_WIDTH_IN / base.width, slideHeight / base.height);
+                const w = base.width * scale;
+                const h = base.height * scale;
+                pptx.addSlide().addImage({ data, x: (SLIDE_WIDTH_IN - w) / 2, y: (slideHeight - h) / 2, w, h });
             }
+            await pdfDoc.destroy();
 
-            const blob = await pptx.write({ outputType: 'blob' }) as Blob;
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-            const url = URL.createObjectURL(blob);
-
-            setDownloadUrl(url);
-            setFilename(`${file.name.replace(/\.[^/.]+$/, '')}.pptx`);
-            setStatus('DONE');
-
-        } catch (error) {
-            console.error('Error converting PDF to PPT:', error);
-            alert('An error occurred during conversion.');
-            setStatus('IDLE');
-        }
+            tool.setProgress('Building PowerPoint file...');
+            const zip = await JSZip.loadAsync((await pptx.write({ outputType: 'arraybuffer' })) as ArrayBuffer);
+            await removeDanglingContentTypes(zip);
+            const blob = await zip.generateAsync({ type: 'blob', mimeType: PPTX_MIME });
+            return { blob, filename: `${baseName(file.name)}.pptx` };
+        }, 'An error occurred during conversion.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">PDF to PowerPoint</h1>
-                <p className="text-muted mb-8 text-lg">Convert your PDF files to PPTX presentation slides.</p>
-            </div>
+            <ToolHeader title="PDF to PowerPoint" subtitle="Turn each PDF page into a PowerPoint slide." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} accept=".pdf" />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={Presentation} />
+                    <Notice>Each page becomes a full-slide image, so the layout looks exactly like the PDF. Text on the slides is not editable.</Notice>
+                    <PrimaryAction onClick={convertToPpt}>
+                        Convert to PowerPoint <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div style={{ backgroundColor: '#fff0ec', padding: '12px', borderRadius: '8px' }}>
-                                <Presentation className="w-8 h-8" style={{ color: '#d24726' }} />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={reset}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                        >
-                            Change
-                        </button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting to PowerPoint...'} />}
 
-                    <div className="alert alert-info text-center mb-4">
-                        Note: This tool converts PDF pages into slide images. Text will not be editable.
-                    </div>
-
-                    <div className="flex justify-center">
-                        <button onClick={convertToPpt} className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl">
-                            Convert to PowerPoint <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status="Converting to PowerPoint..." />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={filename}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
                     message="Your PowerPoint presentation is ready!"
                 />

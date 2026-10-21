@@ -1,284 +1,175 @@
 "use client";
 import { useState } from 'react';
+import { Trash2, FileText, XCircle } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Trash2, ArrowRight, FileText, CheckCircle2, XCircle } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
-
-interface PageInfo {
-    pageNum: number; // 1-indexed
-    thumbnailUrl?: string;
-    isRemoved: boolean;
-}
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { baseName, loadPdf, parsePageRanges, PdfToolError, savePdf, setPageOrder } from '@/lib/pdf';
+import { usePdfThumbnails } from '@/lib/usePdfThumbnails';
+import { useToolRunner } from '@/lib/useToolRunner';
+import grid from '@/components/PageGrid.module.css';
 
 export default function RemovePagesClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [progress, setProgress] = useState('');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [pages, setPages] = useState<PageInfo[]>([]);
+    const [removed, setRemoved] = useState<Set<number>>(new Set());
     const [rangeInput, setRangeInput] = useState('');
+    const tool = useToolRunner();
+    const { pageCount, thumbnails, error } = usePdfThumbnails(tool.status === 'DONE' ? null : file);
 
-    const handleFilesSelected = async (newFiles: File[]) => {
-        if (newFiles.length === 0) return;
-        const selectedFile = newFiles[0];
-        setFile(selectedFile);
-        setProgress('Loading PDF pages...');
-        setStatus('PROCESSING');
-
-        try {
-            const arrayBuffer = await selectedFile.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const totalPages = pdfDoc.getPageCount();
-
-            const initialPages: PageInfo[] = Array.from({ length: totalPages }, (_, i) => ({
-                pageNum: i + 1,
-                isRemoved: false,
-            }));
-            setPages(initialPages);
-            setStatus('IDLE');
-
-            // Render thumbnails asynchronously
-            try {
-                const pdfjsLib = await import('pdfjs-dist');
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
-                const pdfjsDoc = await loadingTask.promise;
-
-                for (let i = 1; i <= Math.min(totalPages, 50); i++) {
-                    const page = await pdfjsDoc.getPage(i);
-                    const viewport = page.getViewport({ scale: 0.35 });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-
-                    if (context) {
-                        await page.render({ canvasContext: context, viewport } as any).promise;
-                        const thumb = canvas.toDataURL('image/jpeg', 0.8);
-                        setPages((prev) =>
-                            prev.map((p) => (p.pageNum === i ? { ...p, thumbnailUrl: thumb } : p))
-                        );
-                    }
-                }
-            } catch (thumbErr) {
-                console.warn('Thumbnails generation skipped:', thumbErr);
-            }
-        } catch (error) {
-            console.error('Error loading PDF:', error);
-            alert('Could not open PDF file.');
-            reset();
-        }
+    const handleFilesSelected = (files: File[]) => {
+        const selected = files[0];
+        if (!selected) return;
+        loadPdf(selected)
+            .then(() => {
+                setFile(selected);
+                setRemoved(new Set());
+            })
+            .catch((err) => tool.notify(err instanceof PdfToolError ? err.message : 'Could not open this PDF.'));
     };
 
-    const toggleRemove = (pageNum: number) => {
-        setPages((prev) =>
-            prev.map((p) => (p.pageNum === pageNum ? { ...p, isRemoved: !p.isRemoved } : p))
-        );
+    const toggle = (pageNum: number) => {
+        setRemoved((prev) => {
+            const next = new Set(prev);
+            if (next.has(pageNum)) next.delete(pageNum);
+            else next.add(pageNum);
+            return next;
+        });
     };
 
     const applyRangeInput = () => {
-        if (!rangeInput.trim()) return;
-        const toRemove = new Set<number>();
-        const parts = rangeInput.split(',');
-
-        for (const part of parts) {
-            if (part.includes('-')) {
-                const [start, end] = part.split('-').map((n) => parseInt(n.trim()));
-                if (!isNaN(start) && !isNaN(end)) {
-                    for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
-                        toRemove.add(i);
-                    }
-                }
-            } else {
-                const num = parseInt(part.trim());
-                if (!isNaN(num)) toRemove.add(num);
-            }
-        }
-
-        setPages((prev) =>
-            prev.map((p) => ({
-                ...p,
-                isRemoved: toRemove.has(p.pageNum) ? true : p.isRemoved,
-            }))
-        );
-    };
-
-    const removePages = async () => {
-        const pagesToKeep = pages.filter((p) => !p.isRemoved);
-
-        if (pagesToKeep.length === 0) {
-            alert('You cannot remove all pages. At least 1 page must remain.');
+        if (!pageCount || !rangeInput.trim()) return;
+        const { pages, invalid } = parsePageRanges(rangeInput, pageCount);
+        if (invalid.length) {
+            tool.notify(`Invalid page range: "${invalid.join('", "')}". This PDF has ${pageCount} pages.`);
             return;
         }
-
-        const removedCount = pages.filter((p) => p.isRemoved).length;
-        if (removedCount === 0) {
-            alert('Please select at least one page to remove.');
-            return;
-        }
-
-        if (!file) return;
-
-        setStatus('PROCESSING');
-        setProgress('Removing selected pages...');
-
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const originalDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const newDoc = await PDFDocument.create();
-
-            const keepIndices = pagesToKeep.map((p) => p.pageNum - 1);
-            const copiedPages = await newDoc.copyPages(originalDoc, keepIndices);
-            copiedPages.forEach((page) => newDoc.addPage(page));
-
-            const pdfBytes = await newDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error removing pages:', error);
-            alert('Failed to remove pages. Please try again.');
-            setStatus('IDLE');
-        }
-    };
-
-    const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-        setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setProgress('');
-        setPages([]);
+        setRemoved((prev) => new Set([...prev, ...pages]));
         setRangeInput('');
     };
 
-    const removedCount = pages.filter((p) => p.isRemoved).length;
-    const remainingCount = pages.length - removedCount;
+    const removedCount = removed.size;
+    const remainingCount = (pageCount ?? 0) - removedCount;
+
+    const removePages = () => {
+        if (!file) return;
+        if (removedCount === 0) return tool.notify('Please select at least one page to remove.');
+        if (remainingCount <= 0) return tool.notify('You cannot remove all pages. At least 1 page must remain.');
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
+            setPageOrder(pdfDoc, pdfDoc.getPages().filter((_, i) => !removed.has(i + 1)));
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_cleaned.pdf` };
+        }, 'Failed to remove pages. Please try again.');
+    };
+
+    const reset = () => {
+        tool.reset();
+        setFile(null);
+        setRemoved(new Set());
+        setRangeInput('');
+    };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Remove Pages from PDF</h1>
-                <p className="text-muted mb-8 text-lg">Delete unwanted pages from your PDF file. Fast, free, and private.</p>
-            </div>
+            <ToolHeader title="Remove Pages from PDF" subtitle="Delete unwanted pages from your PDF file. Fast, free, and private." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={handleFilesSelected} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-5xl mx-auto">
-                    {/* Header bar */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 p-4 bg-white rounded-lg border shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-red-100 rounded text-red-600">
-                                <FileText size={20} />
-                            </div>
-                            <div>
-                                <span className="font-semibold block">{file.name}</span>
-                                <span className="text-sm text-gray-500">
-                                    {pages.length} Pages | <span className="text-red-600 font-medium">{removedCount} marked for removal</span> ({remainingCount} will remain)
-                                </span>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace wide>
+                    <SelectedFile
+                        file={file}
+                        onRemove={reset}
+                        detail={
+                            pageCount === null
+                                ? 'Reading pages...'
+                                : `${pageCount} pages · ${removedCount} marked for removal · ${remainingCount} will remain`
+                        }
+                    />
+
+                    <OptionsCard>
+                        <div className={grid.toolbar}>
+                            <p className={toolStyles.hint} style={{ fontSize: 'var(--text-sm)' }}>
+                                Click a page to mark or unmark it, or enter pages to mark:
+                            </p>
+                            <div style={{ display: 'flex', gap: 8, flex: '1 1 260px', maxWidth: 380 }}>
+                                <input
+                                    type="text"
+                                    value={rangeInput}
+                                    onChange={(e) => setRangeInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && applyRangeInput()}
+                                    placeholder="e.g. 1, 3, 5-8"
+                                    aria-label="Pages to mark for removal"
+                                    className={toolStyles.input}
+                                />
+                                <button type="button" className="btn btn-outline" onClick={applyRangeInput}>
+                                    Mark
+                                </button>
+                                {removedCount > 0 && (
+                                    <button type="button" className="btn btn-outline" onClick={() => setRemoved(new Set())}>
+                                        Clear
+                                    </button>
+                                )}
                             </div>
                         </div>
+                    </OptionsCard>
 
-                        {/* Range input */}
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <input
-                                type="text"
-                                value={rangeInput}
-                                onChange={(e) => setRangeInput(e.target.value)}
-                                placeholder="e.g. 1, 3, 5-8"
-                                className="px-3 py-1.5 border rounded text-sm w-full sm:w-36 focus:outline-none focus:ring-2 focus:ring-red-500"
-                            />
-                            <button
-                                onClick={applyRangeInput}
-                                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium whitespace-nowrap"
-                            >
-                                Mark
-                            </button>
-                            <button onClick={reset} className="text-sm text-red-500 hover:text-red-700 ml-2 whitespace-nowrap">
-                                Change File
-                            </button>
-                        </div>
+                    {error && <p role="alert" style={{ color: 'var(--error)', textAlign: 'center' }}>{error}</p>}
+
+                    <div className={grid.grid}>
+                        {Array.from({ length: pageCount ?? 0 }, (_, i) => i + 1).map((pageNum) => {
+                            const isRemoved = removed.has(pageNum);
+                            return (
+                                <button
+                                    key={pageNum}
+                                    type="button"
+                                    onClick={() => toggle(pageNum)}
+                                    aria-pressed={isRemoved}
+                                    aria-label={`Page ${pageNum}${isRemoved ? ', marked for removal' : ''}`}
+                                    className={`${grid.tile} ${isRemoved ? grid.tileSelected : ''}`}
+                                >
+                                    <div className={grid.thumb}>
+                                        {thumbnails[pageNum] ? (
+                                            // eslint-disable-next-line @next/next/no-img-element -- local blob: URL
+                                            <img src={thumbnails[pageNum]} alt="" style={isRemoved ? { filter: 'grayscale(1)', opacity: 0.6 } : undefined} />
+                                        ) : (
+                                            <div className={grid.thumbPlaceholder}>
+                                                <FileText size={28} />
+                                                <span>Page {pageNum}</span>
+                                            </div>
+                                        )}
+                                        {isRemoved && (
+                                            <div className={grid.thumbOverlay}>
+                                                <XCircle size={40} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className={grid.tileFooter}>
+                                        <span>Page {pageNum}</span>
+                                        <span style={{ color: isRemoved ? 'var(--error)' : 'var(--success)' }}>{isRemoved ? 'Remove' : 'Keep'}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    <p className="text-sm text-gray-500 mb-4 text-center">
-                        Click on any page thumbnail to mark or unmark it for deletion:
-                    </p>
-
-                    {/* Page Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-                        {pages.map((item) => (
-                            <div
-                                key={item.pageNum}
-                                onClick={() => toggleRemove(item.pageNum)}
-                                className={`cursor-pointer p-3 rounded-lg border-2 transition-all relative select-none flex flex-col justify-between ${
-                                    item.isRemoved
-                                        ? 'bg-red-50 border-red-500 opacity-70'
-                                        : 'bg-white border-gray-200 hover:border-gray-400 shadow-sm'
-                                }`}
-                            >
-                                <div className="aspect-[3/4] bg-gray-100 rounded overflow-hidden flex items-center justify-center mb-2 border relative">
-                                    {item.thumbnailUrl ? (
-                                        <img
-                                            src={item.thumbnailUrl}
-                                            alt={`Page ${item.pageNum}`}
-                                            className={`w-full h-full object-contain ${item.isRemoved ? 'grayscale' : ''}`}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center text-gray-400">
-                                            <FileText size={32} />
-                                            <span className="text-sm font-semibold mt-1">Page {item.pageNum}</span>
-                                        </div>
-                                    )}
-
-                                    {item.isRemoved && (
-                                        <div className="absolute inset-0 bg-red-600/30 flex items-center justify-center">
-                                            <XCircle size={40} className="text-red-600 drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center justify-between text-xs pt-1">
-                                    <span className="font-semibold text-gray-700">Page {item.pageNum}</span>
-                                    {item.isRemoved ? (
-                                        <span className="text-red-600 font-medium">Remove</span>
-                                    ) : (
-                                        <span className="text-green-600 font-medium">Keep</span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-center">
-                        <button
-                            onClick={removePages}
-                            disabled={removedCount === 0 || remainingCount === 0}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-3 text-lg disabled:opacity-40"
-                        >
+                    <div style={{ maxWidth: 480, width: '100%', margin: '0 auto' }}>
+                        <PrimaryAction onClick={removePages} disabled={removedCount === 0 || remainingCount <= 0}>
                             <Trash2 size={20} /> Remove {removedCount} {removedCount === 1 ? 'Page' : 'Pages'}
-                        </button>
+                        </PrimaryAction>
                     </div>
-                </div>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status={progress || "Processing PDF..."} />}
+            {tool.status === 'PROCESSING' && <Processing status="Removing selected pages..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}_cleaned.pdf`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message={`Successfully removed ${removedCount} page(s)!`}
+                    message={`Successfully removed ${removedCount} ${removedCount === 1 ? 'page' : 'pages'}!`}
                 />
             )}
         </div>

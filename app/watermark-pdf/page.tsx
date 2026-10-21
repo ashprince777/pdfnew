@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import WatermarkPdfClient from './WatermarkPdfClient';
 
 export const metadata: Metadata = {
-    title: 'Add Watermark to PDF Online - Free PDF Watermarker | MyOnlinePDF',
+    title: 'Add Watermark to PDF Online - Free PDF Watermarker',
     description: 'Add text or image watermarks to your PDF documents online. Protect your copyright and branding instantly for free.',
     alternates: {
         canonical: '/watermark-pdf',

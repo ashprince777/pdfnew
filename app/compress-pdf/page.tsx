@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Compress PDF Online - Reduce PDF File Size Free | MyOnlinePDF',
+    title: 'Compress PDF Online - Reduce PDF File Size Free',
     description: 'Compress PDF files online to reduce file size without losing quality. Optimizes documents for email and web upload.',
     alternates: {
         canonical: '/compress-pdf',

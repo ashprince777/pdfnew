@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Edit PDF Online Free - Add Text & Annotations | MyOnlinePDF',
+    title: 'Edit PDF Online Free - Add Text & Annotations',
     description: 'Edit PDF documents online for free. Add text, highlights, and annotations directly to your PDF pages without installing any software.',
     alternates: {
         canonical: '/edit-pdf',

@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import WordToPdfClient from './WordToPdfClient';
 
 export const metadata: Metadata = {
-    title: 'Word to PDF Converter - Convert Docx to PDF Online | MyOnlinePDF',
+    title: 'Word to PDF Converter - Convert Docx to PDF Online',
     description: 'Convert Microsoft Word documents to PDF format online. Create professional, non-editable documents for sharing and printing.',
     alternates: {
         canonical: '/word-to-pdf',

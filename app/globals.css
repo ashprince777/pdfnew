@@ -102,6 +102,12 @@
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.65);
 }
 
+/*
+ * Base and component styles live in cascade layers. Unlayered CSS always beats
+ * Tailwind's layered utilities, so an unlayered "* { margin: 0 }" silently disabled
+ * every m-*, p-* and text-color utility used in the app.
+ */
+@layer base {
 * {
   box-sizing: border-box;
   padding: 0;
@@ -120,7 +126,9 @@ a {
   text-decoration: none;
   color: inherit;
 }
+}
 
+@layer components {
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -169,6 +177,20 @@ a {
 
 .text-muted {
   color: var(--text-light);
+}
+
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
 }
 
 /* Dark mode overrides for tool cards */

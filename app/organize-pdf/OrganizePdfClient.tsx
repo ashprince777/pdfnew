@@ -1,233 +1,161 @@
 "use client";
 import { useState } from 'react';
+import { degrees } from '@cantoo/pdf-lib';
+import { Trash2, ArrowRight, ArrowLeft, FileText, RotateCw, RotateCcw, Undo2 } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Trash2, ArrowRight, ArrowUp, ArrowDown, FileText } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
+import ReorderableList from '@/components/ReorderableList';
+import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { baseName, loadPdf, PdfToolError, savePdf, setPageOrder } from '@/lib/pdf';
+import { usePdfThumbnails } from '@/lib/usePdfThumbnails';
+import { useToolRunner } from '@/lib/useToolRunner';
+import grid from '@/components/PageGrid.module.css';
 
 interface PageItem {
-    id: string;
-    originalPageNum: number; // 1-indexed
-    thumbnailUrl?: string;
+    /** 1-based page number in the original file */
+    original: number;
+    /** Extra clockwise rotation chosen by the user */
+    rotation: number;
 }
+
+const initialPages = (count: number): PageItem[] => Array.from({ length: count }, (_, i) => ({ original: i + 1, rotation: 0 }));
 
 export default function OrganizePdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [progress, setProgress] = useState('');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
     const [pages, setPages] = useState<PageItem[]>([]);
+    const [originalCount, setOriginalCount] = useState(0);
+    const tool = useToolRunner();
+    const { thumbnails, error } = usePdfThumbnails(tool.status === 'DONE' ? null : file);
 
-    const handleFilesSelected = async (newFiles: File[]) => {
-        if (newFiles.length === 0) return;
-        const selectedFile = newFiles[0];
-        setFile(selectedFile);
-        setProgress('Loading PDF pages...');
-        setStatus('PROCESSING');
-
-        try {
-            const arrayBuffer = await selectedFile.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const totalPages = pdfDoc.getPageCount();
-
-            const initialPages: PageItem[] = Array.from({ length: totalPages }, (_, i) => ({
-                id: `page-${i + 1}-${Date.now()}`,
-                originalPageNum: i + 1,
-            }));
-            setPages(initialPages);
-            setStatus('IDLE');
-
-            // Render thumbnails asynchronously in background
-            try {
-                const pdfjsLib = await import('pdfjs-dist');
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
-                const pdfjsDoc = await loadingTask.promise;
-
-                for (let i = 1; i <= Math.min(totalPages, 50); i++) {
-                    const page = await pdfjsDoc.getPage(i);
-                    const viewport = page.getViewport({ scale: 0.35 });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-
-                    if (context) {
-                        await page.render({ canvasContext: context, viewport } as any).promise;
-                        const thumb = canvas.toDataURL('image/jpeg', 0.8);
-                        setPages((prev) =>
-                            prev.map((p) =>
-                                p.originalPageNum === i ? { ...p, thumbnailUrl: thumb } : p
-                            )
-                        );
-                    }
-                }
-            } catch (thumbErr) {
-                console.warn('Could not generate all thumbnails:', thumbErr);
-            }
-        } catch (error) {
-            console.error('Error loading PDF:', error);
-            alert('Failed to load PDF. Please ensure the file is valid.');
-            reset();
-        }
+    const handleFilesSelected = (files: File[]) => {
+        const selected = files[0];
+        if (!selected) return;
+        loadPdf(selected)
+            .then((doc) => {
+                setFile(selected);
+                setOriginalCount(doc.getPageCount());
+                setPages(initialPages(doc.getPageCount()));
+            })
+            .catch((err) => tool.notify(err instanceof PdfToolError ? err.message : 'Could not open this PDF.'));
     };
 
-    const removeFile = () => {
-        reset();
+    const rotate = (original: number, delta: number) =>
+        setPages((prev) => prev.map((p) => (p.original === original ? { ...p, rotation: (p.rotation + delta + 360) % 360 } : p)));
+
+    const deletePage = (original: number) => {
+        if (pages.length <= 1) return tool.notify('A PDF must contain at least 1 page.');
+        setPages((prev) => prev.filter((p) => p.original !== original));
     };
 
-    const movePage = (index: number, direction: 'up' | 'down') => {
-        const newPages = [...pages];
-        if (direction === 'up' && index > 0) {
-            [newPages[index], newPages[index - 1]] = [newPages[index - 1], newPages[index]];
-        } else if (direction === 'down' && index < newPages.length - 1) {
-            [newPages[index], newPages[index + 1]] = [newPages[index + 1], newPages[index]];
-        }
-        setPages(newPages);
-    };
+    const isUnchanged = pages.length === originalCount && pages.every((p, i) => p.original === i + 1 && p.rotation === 0);
 
-    const deletePage = (index: number) => {
-        if (pages.length <= 1) {
-            alert('PDF must contain at least 1 page.');
-            return;
-        }
-        const newPages = pages.filter((_, i) => i !== index);
-        setPages(newPages);
-    };
-
-    const saveChanges = async () => {
+    const saveChanges = () => {
         if (!file || pages.length === 0) return;
-        setStatus('PROCESSING');
-        setProgress('Reorganizing and saving PDF...');
-
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const originalDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const newDoc = await PDFDocument.create();
-
-            const targetIndices = pages.map((p) => p.originalPageNum - 1);
-            const copiedPages = await newDoc.copyPages(originalDoc, targetIndices);
-            copiedPages.forEach((page) => newDoc.addPage(page));
-
-            const pdfBytes = await newDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error saving organized PDF:', error);
-            alert('Failed to save organized PDF. Please try again.');
-            setStatus('IDLE');
-        }
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
+            const originals = pdfDoc.getPages();
+            const ordered = pages.map((item) => {
+                const page = originals[item.original - 1];
+                if (item.rotation) page.setRotation(degrees((page.getRotation().angle + item.rotation) % 360));
+                return page;
+            });
+            setPageOrder(pdfDoc, ordered);
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_organized.pdf` };
+        }, 'Failed to save organized PDF. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setProgress('');
-        setDownloadUrl(null);
         setPages([]);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Organize PDF</h1>
-                <p className="text-muted mb-8 text-lg">Sort, reorder, and delete pages from your PDF.</p>
-            </div>
+            <ToolHeader title="Organize PDF" subtitle="Drag to reorder pages, rotate them, or delete the ones you don't need." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={handleFilesSelected} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-5xl mx-auto">
-                    <div className="flex items-center justify-between mb-6 p-4 bg-white rounded-lg border shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-red-100 rounded text-red-600">
-                                <FileText size={20} />
-                            </div>
-                            <div>
-                                <span className="font-semibold block">{file.name}</span>
-                                <span className="text-sm text-gray-500">{pages.length} Pages remaining</span>
-                            </div>
-                        </div>
-                        <button onClick={removeFile} className="text-red-500 hover:text-red-700 font-medium text-sm">
-                            Change File
-                        </button>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace wide>
+                    <SelectedFile file={file} onRemove={reset} detail={`${pages.length} pages`} />
+
+                    <div className={grid.toolbar}>
+                        <p className={toolStyles.hint} style={{ fontSize: 'var(--text-sm)' }}>
+                            Drag pages to reorder them, or use the buttons under each page.
+                        </p>
+                        {!isUnchanged && (
+                            <button type="button" className="btn btn-outline" style={{ gap: 6 }} onClick={() => setPages(initialPages(originalCount))}>
+                                <Undo2 size={16} /> Undo all changes
+                            </button>
+                        )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-                        {pages.map((item, index) => (
-                            <div key={item.id} className="bg-white p-3 rounded-lg shadow-sm border relative group hover:border-red-400 transition-all flex flex-col justify-between">
-                                <div className="aspect-[3/4] bg-gray-100 rounded overflow-hidden flex items-center justify-center mb-2 border">
-                                    {item.thumbnailUrl ? (
-                                        <img
-                                            src={item.thumbnailUrl}
-                                            alt={`Page ${item.originalPageNum}`}
-                                            className="w-full h-full object-contain"
-                                        />
+                    {error && <p role="alert" style={{ color: 'var(--error)', textAlign: 'center' }}>{error}</p>}
+
+                    <ReorderableList
+                        label="Pages"
+                        items={pages}
+                        getKey={(item) => String(item.original)}
+                        onReorder={setPages}
+                        className={grid.grid}
+                        renderItem={(item, controls) => (
+                            <div className={grid.tile} style={{ cursor: 'grab' }}>
+                                <div className={grid.thumb}>
+                                    {thumbnails[item.original] ? (
+                                        // eslint-disable-next-line @next/next/no-img-element -- local blob: URL
+                                        <img src={thumbnails[item.original]} alt={`Page ${item.original}`} draggable={false} style={{ transform: `rotate(${item.rotation}deg)` }} />
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center text-gray-400">
-                                            <FileText size={32} />
-                                            <span className="text-sm font-semibold mt-1">Page {item.originalPageNum}</span>
+                                        <div className={grid.thumbPlaceholder}>
+                                            <FileText size={28} />
+                                            <span>Page {item.original}</span>
                                         </div>
                                     )}
                                 </div>
-
-                                <div className="flex items-center justify-between mt-1 pt-2 border-t text-xs text-gray-500">
-                                    <span className="font-medium text-gray-700">Pos: {index + 1} (Pg {item.originalPageNum})</span>
-                                    <button
-                                        onClick={() => deletePage(index)}
-                                        className="text-gray-400 hover:text-red-600 p-1 rounded"
-                                        title="Delete page"
-                                    >
-                                        <Trash2 size={15} />
-                                    </button>
+                                <div className={grid.tileFooter}>
+                                    <span>#{controls.index + 1}</span>
+                                    <span style={{ color: 'var(--text-light)' }}>
+                                        Page {item.original}
+                                        {item.rotation ? ` · ${item.rotation}°` : ''}
+                                    </span>
                                 </div>
-
-                                <div className="flex justify-center gap-2 mt-2">
-                                    <button
-                                        onClick={() => movePage(index, 'up')}
-                                        disabled={index === 0}
-                                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-20 border text-gray-700"
-                                        title="Move left"
-                                    >
-                                        <ArrowUp size={14} className="-rotate-90" />
+                                <div className={grid.tileActions}>
+                                    <button type="button" className={toolStyles.iconButton} onClick={controls.moveUp} disabled={controls.isFirst} aria-label={`Move page ${item.original} earlier`} title="Move earlier">
+                                        <ArrowLeft size={16} />
                                     </button>
-                                    <button
-                                        onClick={() => movePage(index, 'down')}
-                                        disabled={index === pages.length - 1}
-                                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-20 border text-gray-700"
-                                        title="Move right"
-                                    >
-                                        <ArrowDown size={14} className="-rotate-90" />
+                                    <button type="button" className={toolStyles.iconButton} onClick={() => rotate(item.original, -90)} aria-label={`Rotate page ${item.original} left`} title="Rotate left">
+                                        <RotateCcw size={16} />
+                                    </button>
+                                    <button type="button" className={toolStyles.iconButton} onClick={() => rotate(item.original, 90)} aria-label={`Rotate page ${item.original} right`} title="Rotate right">
+                                        <RotateCw size={16} />
+                                    </button>
+                                    <button type="button" className={toolStyles.iconButton} onClick={() => deletePage(item.original)} aria-label={`Delete page ${item.original}`} title="Delete page">
+                                        <Trash2 size={16} />
+                                    </button>
+                                    <button type="button" className={toolStyles.iconButton} onClick={controls.moveDown} disabled={controls.isLast} aria-label={`Move page ${item.original} later`} title="Move later">
+                                        <ArrowRight size={16} />
                                     </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    />
 
-                    <div className="flex justify-center">
-                        <button onClick={saveChanges} className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-3 text-lg">
+                    <div style={{ maxWidth: 480, width: '100%', margin: '0 auto' }}>
+                        <PrimaryAction onClick={saveChanges}>
                             Save Organized PDF <ArrowRight size={20} />
-                        </button>
+                        </PrimaryAction>
                     </div>
-                </div>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status={progress || "Organizing PDF..."} />}
+            {tool.status === 'PROCESSING' && <Processing status="Reorganizing and saving PDF..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}_organized.pdf`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
                     message="Your organized PDF is ready!"
                 />

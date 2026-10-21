@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-    title: 'Merge PDF Online - Combine PDF Files for Free | MyOnlinePDF',
+    title: 'Merge PDF Online - Combine PDF Files for Free',
     description: 'Merge multiple PDF files into one document online. Fast, secure, and completely free. No software installation required.',
     alternates: {
         canonical: '/merge-pdf',
@@ -91,21 +91,21 @@ export default function MergePdfPage() {
 
                     <h2 className="text-2xl font-semibold mb-4 text-gray-800">How to Merge PDFs Step-by-Step</h2>
                     <ol className="list-decimal pl-6 mb-8 text-gray-700 space-y-3">
-                        <li>Click the <strong>"Select PDF files"</strong> button or drag and drop your files into the upload area.</li>
+                        <li>Click the <strong>“Browse Files”</strong> button or drag and drop your files into the upload area.</li>
                         <li>Select two or more PDF documents you wish to combine.</li>
-                        <li>Review the file list. You can add more files or remove ones you don't need.</li>
-                        <li>Click the <strong>"Merge PDF"</strong> button.</li>
+                        <li>Drag files (or use the arrow buttons) to put them in the right order. You can add more files or remove ones you don’t need.</li>
+                        <li>Click the <strong>“Merge PDF”</strong> button.</li>
                         <li>Wait a moment for the process to complete, then download your merged file instantly.</li>
                     </ol>
 
                     <h2 className="text-2xl font-semibold mb-6 text-gray-800">Common Problems Solved</h2>
                     <p className="mb-6 text-gray-700">
-                        <strong>"I have too many email attachments."</strong><br />
-                        Instead of sending 5 separate PDF attachments, merge them into one organized file. It's more professional and easier for the recipient to view.
+                        <strong>“I have too many email attachments.”</strong><br />
+                        Instead of sending 5 separate PDF attachments, merge them into one organized file. It’s more professional and easier for the recipient to view.
                     </p>
                     <p className="mb-8 text-gray-700">
-                        <strong>"My scanner created separate files for each page."</strong><br />
-                        It's annoying when scanners output page1.pdf, page2.pdf, etc. Use our tool to stitch them back into a single, cohesive document.
+                        <strong>“My scanner created separate files for each page.”</strong><br />
+                        It’s annoying when scanners output page1.pdf, page2.pdf, etc. Use our tool to stitch them back into a single, cohesive document.
                     </p>
 
                     <h2 className="text-2xl font-semibold mb-6 text-gray-800">Related Tools</h2>

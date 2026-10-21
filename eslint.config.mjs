@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored / generated browser bundles
+    "public/**",
+    // Ad-hoc debugging scripts in the repo root
+    "test-*.js",
+    "test-*.mjs",
+    "text-exhaustive.js",
   ]),
 ]);
 

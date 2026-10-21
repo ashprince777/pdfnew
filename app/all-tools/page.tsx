@@ -1,9 +1,16 @@
-"use client";
-import React from 'react';
+import type { Metadata } from 'next';
 import ToolCard from '@/components/ToolCard';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { ALL_TOOLS, CATEGORIES } from '@/lib/tools';
 import styles from '../page.module.css';
+
+export const metadata: Metadata = {
+    title: 'All PDF Tools',
+    description: 'Every free MyOnlinePDF tool in one place: merge, split, compress, convert, edit, sign and secure PDFs in your browser.',
+    alternates: {
+        canonical: '/all-tools',
+    },
+};
 
 export default function AllToolsPage() {
     return (

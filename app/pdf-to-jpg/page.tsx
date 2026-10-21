@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToJpgClient from './PdfToJpgClient';
 
 export const metadata: Metadata = {
-    title: 'PDF to JPG Converter - Convert PDF Pages to Images | MyOnlinePDF',
+    title: 'PDF to JPG Converter - Convert PDF Pages to Images',
     description: 'Convert PDF pages to high-quality JPG images. Extract every page as a separate image file instantly.',
     alternates: {
         canonical: '/pdf-to-jpg',

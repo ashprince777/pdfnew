@@ -1,5 +1,29 @@
 export const RECENT_TOOLS_KEY = 'pdf_recent_tools';
 export const THEME_KEY = 'pdf_theme';
+export const CONSENT_KEY = 'cookie-consent';
+/** Fired on window when the visitor changes their cookie choice. */
+export const CONSENT_EVENT = 'cookie-consent-change';
+
+export type Consent = 'accepted' | 'declined';
+
+export function getConsent(): Consent | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const value = localStorage.getItem(CONSENT_KEY);
+        return value === 'accepted' || value === 'declined' ? value : null;
+    } catch {
+        return null;
+    }
+}
+
+export function setConsent(value: Consent): void {
+    try {
+        localStorage.setItem(CONSENT_KEY, value);
+    } catch {
+        // Ignore local storage write errors
+    }
+    window.dispatchEvent(new Event(CONSENT_EVENT));
+}
 
 export function getRecentToolHrefs(): string[] {
     if (typeof window === 'undefined') return [];

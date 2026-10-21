@@ -1,34 +1,37 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ALL_TOOLS, POPULAR_TOOL_HREFS, ToolItem } from '@/lib/tools';
-import { getRecentToolHrefs } from '@/lib/storage';
+import { RECENT_TOOLS_KEY, getRecentToolHrefs } from '@/lib/storage';
 import { Sparkles, Clock } from 'lucide-react';
 
+function subscribeToStorage(onChange: () => void) {
+    window.addEventListener('storage', onChange);
+    return () => window.removeEventListener('storage', onChange);
+}
+
 export default function QuickAccessBar() {
-    const [tools, setTools] = useState<ToolItem[]>([]);
-    const [isRecent, setIsRecent] = useState(false);
-
-    useEffect(() => {
-        const recentHrefs = getRecentToolHrefs();
-        if (recentHrefs.length > 0) {
-            const resolved = recentHrefs
-                .map((href) => ALL_TOOLS.find((t) => t.href === href))
-                .filter(Boolean) as ToolItem[];
-            if (resolved.length > 0) {
-                setTools(resolved);
-                setIsRecent(true);
-                return;
+    // Read localStorage only on the client; the server render shows the popular tools.
+    const recentRaw = useSyncExternalStore(
+        subscribeToStorage,
+        () => {
+            try {
+                return localStorage.getItem(RECENT_TOOLS_KEY);
+            } catch {
+                return null;
             }
-        }
+        },
+        () => null
+    );
 
-        // Fallback to popular tools
-        const popular = POPULAR_TOOL_HREFS
-            .map((href) => ALL_TOOLS.find((t) => t.href === href))
-            .filter(Boolean) as ToolItem[];
-        setTools(popular);
-        setIsRecent(false);
-    }, []);
+    const { tools, isRecent } = useMemo(() => {
+        const recent = recentRaw
+            ? (getRecentToolHrefs().map((href) => ALL_TOOLS.find((t) => t.href === href)).filter(Boolean) as ToolItem[])
+            : [];
+        if (recent.length > 0) return { tools: recent, isRecent: true };
+        const popular = POPULAR_TOOL_HREFS.map((href) => ALL_TOOLS.find((t) => t.href === href)).filter(Boolean) as ToolItem[];
+        return { tools: popular, isRecent: false };
+    }, [recentRaw]);
 
     if (tools.length === 0) return null;
 

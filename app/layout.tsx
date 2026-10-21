@@ -30,14 +30,6 @@ export const metadata: Metadata = {
     siteName: 'MyOnlinePDF',
     type: 'website',
     locale: 'en_US',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'MyOnlinePDF Tools',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -58,6 +50,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Applies the saved (or system) theme before first paint to avoid a light-mode flash.
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('pdf_theme')||localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -65,6 +60,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={inter.className}>
         <ToastProvider>
           <Navbar />

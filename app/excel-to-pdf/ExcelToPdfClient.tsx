@@ -1,217 +1,150 @@
 "use client";
 import { useState } from 'react';
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from '@cantoo/pdf-lib';
+import { FileSpreadsheet, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { FileSpreadsheet, ArrowRight, Trash2 } from 'lucide-react';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import * as XLSX from 'xlsx';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName, embedUnicodeFont, PdfToolError, savePdf, toDrawableText, wrapText } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type Orientation = 'landscape' | 'portrait';
+
+const A4: [number, number] = [595.28, 841.89];
+const MARGIN = 36;
+const FONT_SIZE = 9;
+const LINE_HEIGHT = FONT_SIZE * 1.3;
+const CELL_PAD = 4;
+const MIN_COL = 40;
+
+/** Distributes the printable width across columns in proportion to their content length. */
+function columnWidths(rows: string[][], columns: number, available: number): number[] {
+    const lengths = Array.from({ length: columns }, (_, c) =>
+        Math.min(40, Math.max(4, ...rows.slice(0, 200).map((r) => (r[c] ?? '').length)))
+    );
+    const total = lengths.reduce((a, b) => a + b, 0);
+    const widths = lengths.map((len) => Math.max(MIN_COL, (len / total) * available));
+    const scale = available / widths.reduce((a, b) => a + b, 0);
+    return widths.map((w) => w * scale);
+}
 
 export default function ExcelToPdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [orientation, setOrientation] = useState<Orientation>('landscape');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) {
-            setFile(newFiles[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    const convertToPdf = async () => {
+    const convertToPdf = () => {
         if (!file) return;
-
-        setStatus('PROCESSING');
-
-        try {
-            // Read the Excel file
-            const arrayBuffer = await file.arrayBuffer();
-            const wb = XLSX.read(arrayBuffer, { type: 'array' });
+        tool.run(async () => {
+            const XLSX = await import('xlsx');
+            let wb: import('xlsx').WorkBook;
+            try {
+                wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+            } catch {
+                throw new PdfToolError('This file is not a valid Excel workbook.');
+            }
 
             const pdfDoc = await PDFDocument.create();
-            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const fontSize = 10;
-            const headerFontSize = 12;
-            const lineHeight = fontSize * 1.8;
-            const margin = 40;
-            const pageWidth = 841.89; // A4 Landscape for better table fit
-            const pageHeight = 595.28;
-            const maxWidth = pageWidth - margin * 2;
+            const font = await embedUnicodeFont(pdfDoc, 'regular');
+            const bold = await embedUnicodeFont(pdfDoc, 'bold');
+            const [pageWidth, pageHeight] = orientation === 'landscape' ? [A4[1], A4[0]] : A4;
+            const available = pageWidth - 2 * MARGIN;
 
             for (const sheetName of wb.SheetNames) {
-                const ws = wb.Sheets[sheetName];
-                const data: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as string[][];
+                tool.setProgress(`Converting sheet "${sheetName}"...`);
+                // `raw: false` returns the formatted text (dates, currency, percentages) as shown in Excel.
+                const rows = (XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '', raw: false, blankrows: false }) as unknown[][])
+                    .map((r) => r.map((v) => String(v ?? '')));
+                if (rows.length === 0) continue;
 
-                if (data.length === 0) continue;
+                const columns = Math.max(...rows.map((r) => r.length));
+                // Very wide sheets are split into chunks of columns that fit the page width.
+                const chunkSize = Math.max(1, Math.floor(available / (MIN_COL * 1.5)));
+                for (let start = 0; start < columns; start += chunkSize) {
+                    const end = Math.min(columns, start + chunkSize);
+                    const chunk = rows.map((r) => r.slice(start, end));
+                    const widths = columnWidths(chunk, end - start, available);
 
-                let page = pdfDoc.addPage([pageWidth, pageHeight]);
-                let yPos = pageHeight - margin;
+                    let page: PDFPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                    let y = pageHeight - MARGIN;
+                    const title = toDrawableText(bold, columns > chunkSize ? `${sheetName} (columns ${start + 1}-${end})` : sheetName);
+                    page.drawText(title, { x: MARGIN, y: y - 12, size: 12, font: bold, color: rgb(0.13, 0.45, 0.27) });
+                    y -= 26;
 
-                // Draw sheet name as header
-                page.drawText(`Sheet: ${sheetName}`, {
-                    x: margin,
-                    y: yPos,
-                    size: headerFontSize,
-                    font: boldFont,
-                    color: rgb(0.13, 0.45, 0.27),
-                });
-                yPos -= lineHeight * 1.5;
-
-                // Calculate column widths based on content
-                const maxCols = Math.max(...data.map(row => row.length));
-                const colWidth = Math.min(Math.floor(maxWidth / Math.max(maxCols, 1)), 150);
-
-                for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
-                    const row = data[rowIdx];
-
-                    if (yPos < margin + lineHeight) {
-                        page = pdfDoc.addPage([pageWidth, pageHeight]);
-                        yPos = pageHeight - margin;
-                    }
-
-                    // Draw alternating row background
-                    if (rowIdx === 0) {
-                        page.drawRectangle({
-                            x: margin - 4,
-                            y: yPos - 4,
-                            width: Math.min(maxCols * colWidth, maxWidth) + 8,
-                            height: lineHeight,
-                            color: rgb(0.85, 0.93, 0.86),
-                        });
-                    } else if (rowIdx % 2 === 0) {
-                        page.drawRectangle({
-                            x: margin - 4,
-                            y: yPos - 4,
-                            width: Math.min(maxCols * colWidth, maxWidth) + 8,
-                            height: lineHeight,
-                            color: rgb(0.96, 0.96, 0.96),
-                        });
-                    }
-
-                    for (let colIdx = 0; colIdx < row.length; colIdx++) {
-                        const rawCell = String(row[colIdx] ?? '');
-                        const cellText = rawCell
-                            .replace(/[\u201C\u201D]/g, '"')
-                            .replace(/[\u2018\u2019]/g, "'")
-                            .replace(/[\u2013\u2014]/g, '-')
-                            .replace(/[\u2022\u00B7]/g, '* ')
-                            .replace(/[\u20B9]/g, 'Rs. ')
-                            .replace(/[\u20AC]/g, 'EUR ')
-                            .replace(/[\u00A3]/g, 'GBP ')
-                            .replace(/[\u00A5]/g, 'JPY ')
-                            .replace(/[^\x00-\xFF]/g, ' ');
-
-                        // Truncate if too long
-                        const maxChars = Math.floor(colWidth / (fontSize * 0.5));
-                        const displayText = cellText.length > maxChars
-                            ? cellText.substring(0, maxChars - 2) + '..'
-                            : cellText;
-
-                        const xPos = margin + colIdx * colWidth;
-                        if (xPos + colWidth > pageWidth - margin + 20) break; // Don't overflow page
-
-                        try {
-                            page.drawText(displayText, {
-                                x: xPos,
-                                y: yPos,
-                                size: rowIdx === 0 ? fontSize + 1 : fontSize,
-                                font: rowIdx === 0 ? boldFont : font,
-                                color: rgb(0, 0, 0),
-                            });
-                        } catch {
-                            // Safe fallback for any obscure character
-                            page.drawText(displayText.replace(/[^\x20-\x7E]/g, ' '), {
-                                x: xPos,
-                                y: yPos,
-                                size: rowIdx === 0 ? fontSize + 1 : fontSize,
-                                font: rowIdx === 0 ? boldFont : font,
-                                color: rgb(0, 0, 0),
-                            });
+                    const drawRow = (cells: string[], rowFont: PDFFont, shade?: [number, number, number]) => {
+                        const wrapped = cells.map((cell, c) => wrapText(rowFont, toDrawableText(rowFont, cell), FONT_SIZE, widths[c] - 2 * CELL_PAD).slice(0, 8));
+                        const height = Math.max(1, ...wrapped.map((lines) => lines.length)) * LINE_HEIGHT + 2 * CELL_PAD;
+                        if (y - height < MARGIN) {
+                            page = pdfDoc.addPage([pageWidth, pageHeight]);
+                            y = pageHeight - MARGIN;
+                            if (rowFont !== bold && chunk[0]) drawRow(chunk[0], bold, [0.85, 0.93, 0.86]); // repeat header
                         }
-                    }
+                        if (shade) page.drawRectangle({ x: MARGIN, y: y - height, width: available, height, color: rgb(...shade) });
+                        let x = MARGIN;
+                        wrapped.forEach((lines, c) => {
+                            lines.forEach((line, l) => {
+                                if (line) page.drawText(line, { x: x + CELL_PAD, y: y - CELL_PAD - FONT_SIZE - l * LINE_HEIGHT + 2, size: FONT_SIZE, font: rowFont, color: rgb(0.1, 0.1, 0.1) });
+                            });
+                            x += widths[c];
+                        });
+                        page.drawLine({ start: { x: MARGIN, y: y - height }, end: { x: MARGIN + available, y: y - height }, thickness: 0.4, color: rgb(0.8, 0.8, 0.8) });
+                        y -= height;
+                    };
 
-                    yPos -= lineHeight;
+                    chunk.forEach((row, index) => {
+                        if (index === 0) drawRow(row, bold, [0.85, 0.93, 0.86]);
+                        else drawRow(row, font, index % 2 === 0 ? [0.96, 0.96, 0.96] : undefined);
+                    });
                 }
             }
 
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            alert("Error converting file. Please ensure it's a valid Excel file.");
-            setStatus('IDLE');
-        }
+            if (pdfDoc.getPageCount() === 0) throw new PdfToolError('This workbook has no data to convert.');
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}.pdf` };
+        }, "Error converting file. Please ensure it's a valid Excel file.");
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Excel to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Convert your Excel spreadsheets to PDF.</p>
-            </div>
+            <ToolHeader title="Excel to PDF" subtitle="Convert spreadsheets (XLSX, XLS, CSV) into clean, readable PDF tables." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".xlsx,.xls" />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".xlsx,.xls,.csv,.ods" />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={FileSpreadsheet} />
+                    <OptionsCard title="Page orientation">
+                        <ChoiceGroup
+                            label="Orientation"
+                            value={orientation}
+                            onChange={setOrientation}
+                            options={[
+                                { value: 'landscape', title: 'Landscape', text: 'Best for wide tables' },
+                                { value: 'portrait', title: 'Portrait' },
+                            ]}
+                        />
+                    </OptionsCard>
+                    <Notice>Each sheet starts on a new page. Long text wraps inside its cell and the header row repeats on every page.</Notice>
+                    <PrimaryAction onClick={convertToPdf}>
+                        Convert to PDF <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-green-100 p-3 rounded-lg">
-                                <FileSpreadsheet className="text-green-600 w-8 h-8" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={removeFile}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                            title="Remove file"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting spreadsheet...'} />}
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={convertToPdf}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                        >
-                            Convert to PDF <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status="Converting Excel to PDF..." />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}.pdf`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message="Your PDF document is ready!"
+                    message="Your PDF is ready!"
                 />
             )}
         </div>

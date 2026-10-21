@@ -5,7 +5,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Accordion from '@/components/Accordion';
 
 export const metadata: Metadata = {
-    title: 'FAQ - Common Questions | MyOnlinePDF',
+    title: 'FAQ - Common Questions',
     description: 'Frequently asked questions about MyOnlinePDF. Learn about our free PDF tools, security, privacy, and how to use our services.',
     alternates: {
         canonical: '/faq',
@@ -19,19 +19,19 @@ const faqItems = [
     },
     {
         question: 'Are my files stored on your servers?',
-        answer: 'No. For most tools (Merge, Split, Compress, etc.), we process your files entirely within your web browser using advanced client-side technology. Your files never leave your device. For tools requiring server-side processing (like Protect PDF), files are deleted immediately after processing.',
+        answer: 'No. Every tool processes your files entirely within your web browser. Your files are never uploaded, so there is nothing for us to store.',
     },
     {
         question: 'Is it safe to use MyOnlinePDF?',
-        answer: 'Absolutely. We prioritize your privacy and security. Since most processing happens locally on your device, there is minimal risk of data interception. We use SSL encryption (HTTPS) for all connections.',
+        answer: 'Yes. Because all processing happens locally on your device, your documents are never transmitted over the network. The site itself is served over HTTPS.',
     },
     {
-        question: 'Why are some tools marked as "Server Processing"?',
-        answer: 'Some complex operations, like encryption or converting proprietary formats, require server-side libraries to function correctly across all devices. We handle these securely and ensure strict data deletion policies.',
+        question: 'Do any tools need an internet connection while processing?',
+        answer: 'No. Once a tool page has loaded, the processing itself happens offline in your browser. Encryption, conversion and editing all run on your device.',
     },
     {
         question: 'How many files can I process at once?',
-        answer: 'There is no strict limit on the number of files, but performance depends on your device capabilities since processing happens in your browser.',
+        answer: 'There is no strict limit on the number of files. Because processing happens in your browser, very large files (hundreds of pages) depend on your device memory; tools show the size limit they support.',
     },
 ];
 

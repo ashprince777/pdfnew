@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Crop PDF Online Free - Trim PDF Margins | MyOnlinePDF',
+    title: 'Crop PDF Online Free - Trim PDF Margins',
     description: 'Crop PDF margins online for free. Adjust top, bottom, left, and right borders easily. Fast, precise, and completely private.',
     alternates: {
         canonical: '/crop-pdf',

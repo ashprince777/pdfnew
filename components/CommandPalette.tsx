@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ALL_TOOLS, CATEGORIES, ToolItem } from '@/lib/tools';
+import { ALL_TOOLS, CATEGORIES } from '@/lib/tools';
 import { Search, X, ArrowRight } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -14,13 +14,21 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
+    const [wasOpen, setWasOpen] = useState(isOpen);
 
-    useEffect(() => {
+    // Start from a clean search every time the palette opens.
+    if (isOpen !== wasOpen) {
+        setWasOpen(isOpen);
         if (isOpen) {
             setQuery('');
             setSelectedIndex(0);
-            setTimeout(() => inputRef.current?.focus(), 50);
         }
+    }
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const timer = setTimeout(() => inputRef.current?.focus(), 50);
+        return () => clearTimeout(timer);
     }, [isOpen]);
 
     const filteredTools = ALL_TOOLS.filter((tool) => {
@@ -32,10 +40,6 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             tool.category.toLowerCase().includes(q)
         );
     });
-
-    useEffect(() => {
-        setSelectedIndex(0);
-    }, [query]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -114,7 +118,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                         ref={inputRef}
                         type="text"
                         value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(e) => {
+                            setQuery(e.target.value);
+                            setSelectedIndex(0);
+                        }}
                         placeholder="Search any tool (e.g. Merge, Compress, Word, Sign)..."
                         aria-label="Search tools input"
                         style={{

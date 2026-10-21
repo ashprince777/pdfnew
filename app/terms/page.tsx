@@ -1,3 +1,13 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Terms of Service',
+    description: 'Terms of service for using the free MyOnlinePDF online PDF tools.',
+    alternates: {
+        canonical: '/terms',
+    },
+};
+
 export default function TermsPage() {
     return (
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px' }}>
@@ -10,7 +20,7 @@ export default function TermsPage() {
             <p>Permission is granted to use our online PDF tools for personal and commercial purposes. You may not attempt to reverse engineer any software contained on the website.</p>
 
             <h2 className="mt-4">3. Disclaimer</h2>
-            <p>The materials on PDF Tools are provided "as is". We make no warranties, expressed or implied, and hereby disclaim and negate all other warranties.</p>
+            <p>The materials on MyOnlinePDF are provided “as is”. We make no warranties, expressed or implied, and hereby disclaim and negate all other warranties.</p>
         </div>
     );
 }

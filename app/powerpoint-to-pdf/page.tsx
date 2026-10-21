@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'PowerPoint to PDF Online - Convert PPTX to PDF Free | MyOnlinePDF',
+    title: 'PowerPoint to PDF Online - Convert PPTX to PDF Free',
     description: 'Convert PowerPoint PPTX and PPT files to PDF online. Free, secure, and fast conversion.',
     alternates: {
         canonical: '/powerpoint-to-pdf',

@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Remove Pages from PDF Online Free - Delete PDF Pages | MyOnlinePDF',
+    title: 'Remove Pages from PDF Online Free - Delete PDF Pages',
     description: 'Delete unwanted pages from your PDF documents online for free. Select pages visually or by page number range. 100% private and secure.',
     alternates: {
         canonical: '/remove-pages',

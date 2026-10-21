@@ -1,396 +1,243 @@
 "use client";
 import { useState } from 'react';
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from '@cantoo/pdf-lib';
+import { Code, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Code, ArrowRight, Trash2, FileText } from 'lucide-react';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
+import { baseName, embedUnicodeFont, PdfToolError, savePdf, toDrawableText, wrapText } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type Mode = 'upload' | 'paste';
+
+const PAGE: [number, number] = [595.28, 841.89]; // A4
+const MARGIN = 50;
+const MAX_WIDTH = PAGE[0] - MARGIN * 2;
+const SKIPPED_TAGS = new Set(['script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe', 'object', 'head', 'title', 'meta', 'link']);
+const HEADINGS: Record<string, { size: number; before: number; after: number }> = {
+    h1: { size: 22, before: 10, after: 8 },
+    h2: { size: 18, before: 8, after: 6 },
+    h3: { size: 14, before: 6, after: 4 },
+    h4: { size: 12, before: 4, after: 4 },
+    h5: { size: 12, before: 4, after: 4 },
+    h6: { size: 12, before: 4, after: 4 },
+};
+
+const collapse = (text: string | null | undefined) => (text || '').replace(/\s+/g, ' ').trim();
+
+async function renderHtml(html: string): Promise<PDFDocument> {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const pdfDoc = await PDFDocument.create();
+    const font = await embedUnicodeFont(pdfDoc, 'regular');
+    const bold = await embedUnicodeFont(pdfDoc, 'bold');
+    const mono = await pdfDoc.embedFont(StandardFonts.Courier);
+    const title = collapse(doc.title);
+    if (title) pdfDoc.setTitle(title);
+
+    let page: PDFPage = pdfDoc.addPage(PAGE);
+    let y = PAGE[1] - MARGIN;
+
+    const ensureSpace = (needed: number) => {
+        if (y - needed < MARGIN) {
+            page = pdfDoc.addPage(PAGE);
+            y = PAGE[1] - MARGIN;
+        }
+    };
+
+    const drawParagraph = (text: string, size: number, f: PDFFont, color: RGB = rgb(0.12, 0.12, 0.12), indent = 0) => {
+        const lineHeight = size * 1.4;
+        for (const line of wrapText(f, toDrawableText(f, text), size, MAX_WIDTH - indent)) {
+            ensureSpace(lineHeight);
+            if (line) page.drawText(line, { x: MARGIN + indent, y: y - size, size, font: f, color });
+            y -= lineHeight;
+        }
+    };
+
+    const drawTable = (table: HTMLTableElement) => {
+        const rows = Array.from(table.querySelectorAll('tr'))
+            .map((tr) => Array.from(tr.querySelectorAll('th, td')).map((cell) => ({ text: collapse(cell.textContent), header: cell.tagName === 'TH' })))
+            .filter((cells) => cells.length > 0);
+        if (rows.length === 0) return;
+        const columns = Math.max(...rows.map((r) => r.length));
+        const colWidth = MAX_WIDTH / columns;
+        const size = columns > 6 ? 8 : 10;
+        const lineHeight = size * 1.3;
+        y -= 6;
+        for (const cells of rows) {
+            const wrapped = cells.map((cell) => {
+                const f = cell.header ? bold : font;
+                return { f, lines: wrapText(f, toDrawableText(f, cell.text), size, colWidth - 8) };
+            });
+            const height = Math.max(...wrapped.map((w) => w.lines.length)) * lineHeight + 8;
+            ensureSpace(height);
+            wrapped.forEach(({ f, lines }, c) => {
+                lines.forEach((line, l) => {
+                    if (line) page.drawText(line, { x: MARGIN + c * colWidth + 4, y: y - 4 - size - l * lineHeight, size, font: f, color: rgb(0.1, 0.1, 0.1) });
+                });
+            });
+            page.drawRectangle({ x: MARGIN, y: y - height, width: colWidth * columns, height, borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 0.5 });
+            y -= height;
+        }
+        y -= 8;
+    };
+
+    const drawCode = (text: string) => {
+        const size = 9;
+        const lineHeight = 12;
+        const charWidth = mono.widthOfTextAtSize('M', size);
+        const perLine = Math.floor((MAX_WIDTH - 20) / charWidth);
+        y -= 4;
+        for (const raw of text.replace(/\t/g, '    ').split('\n')) {
+            // Courier only covers Latin-1; wrap long lines instead of cutting them off.
+            const line = toDrawableText(mono, raw);
+            for (let i = 0; i === 0 || i < line.length; i += perLine) {
+                ensureSpace(lineHeight);
+                const part = line.slice(i, i + perLine);
+                page.drawRectangle({ x: MARGIN, y: y - lineHeight + 2, width: MAX_WIDTH, height: lineHeight, color: rgb(0.96, 0.96, 0.97) });
+                if (part) page.drawText(part, { x: MARGIN + 10, y: y - size, size, font: mono, color: rgb(0.2, 0.2, 0.4) });
+                y -= lineHeight;
+            }
+        }
+        y -= 6;
+    };
+
+    const walk = (node: Node, listDepth = 0) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = collapse(node.textContent);
+            if (text) {
+                drawParagraph(text, 11, font);
+                y -= 4;
+            }
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
+        if (SKIPPED_TAGS.has(tag)) return;
+
+        if (HEADINGS[tag]) {
+            const h = HEADINGS[tag];
+            const text = collapse(el.textContent);
+            if (text) {
+                y -= h.before;
+                drawParagraph(text, h.size, bold, rgb(0.05, 0.05, 0.05));
+                y -= h.after;
+            }
+        } else if (tag === 'p' || tag === 'blockquote') {
+            const text = collapse(el.textContent);
+            if (text) {
+                drawParagraph(text, 11, font, tag === 'blockquote' ? rgb(0.35, 0.35, 0.4) : undefined, tag === 'blockquote' ? 16 : 0);
+                y -= 6;
+            }
+        } else if (tag === 'li') {
+            const ordered = el.parentElement?.tagName === 'OL';
+            const index = Array.from(el.parentElement?.children || []).indexOf(el) + 1;
+            const nested = Array.from(el.children).filter((c) => c.tagName === 'UL' || c.tagName === 'OL');
+            const ownText = collapse(Array.from(el.childNodes).filter((c) => !nested.includes(c as Element)).map((c) => c.textContent).join(' '));
+            if (ownText) drawParagraph(`${ordered ? `${index}.` : '•'}  ${ownText}`, 11, font, undefined, 12 + listDepth * 14);
+            y -= 2;
+            nested.forEach((list) => Array.from(list.childNodes).forEach((child) => walk(child, listDepth + 1)));
+        } else if (tag === 'ul' || tag === 'ol') {
+            Array.from(el.childNodes).forEach((child) => walk(child, listDepth));
+            y -= 4;
+        } else if (tag === 'pre') {
+            drawCode(el.textContent || '');
+        } else if (tag === 'table') {
+            drawTable(el as HTMLTableElement);
+        } else if (tag === 'hr') {
+            ensureSpace(15);
+            y -= 6;
+            page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE[0] - MARGIN, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+            y -= 10;
+        } else if (tag === 'br') {
+            y -= 8;
+        } else {
+            Array.from(el.childNodes).forEach((child) => walk(child, listDepth));
+        }
+    };
+
+    if (doc.body) Array.from(doc.body.childNodes).forEach((child) => walk(child));
+    return pdfDoc;
+}
 
 export default function HtmlToPdfClient() {
+    const [mode, setMode] = useState<Mode>('upload');
     const [file, setFile] = useState<File | null>(null);
     const [htmlText, setHtmlText] = useState('');
-    const [mode, setMode] = useState<'upload' | 'paste'>('upload');
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [outputFilename, setOutputFilename] = useState('document.pdf');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) {
-            setFile(newFiles[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    const convertHtmlToPdf = async () => {
-        let contentToParse = '';
-        let filename = 'converted_document.pdf';
-
-        if (mode === 'upload') {
-            if (!file) return;
-            contentToParse = await file.text();
-            filename = `${file.name.replace(/\.[^/.]+$/, '')}.pdf`;
-        } else {
-            if (!htmlText.trim()) {
-                alert('Please enter or paste HTML code.');
-                return;
-            }
-            contentToParse = htmlText;
-            filename = 'pasted_html.pdf';
-        }
-
-        setStatus('PROCESSING');
-        setOutputFilename(filename);
-
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(contentToParse, 'text/html');
-
-            const pdfDoc = await PDFDocument.create();
-            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const codeFont = await pdfDoc.embedFont(StandardFonts.Courier);
-
-            const pageWidth = 595.28; // A4
-            const pageHeight = 841.89;
-            const margin = 50;
-            const maxWidth = pageWidth - margin * 2;
-
-            let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-            let yPos = pageHeight - margin;
-
-            const checkNewPage = (neededSpace: number) => {
-                if (yPos - neededSpace < margin) {
-                    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-                    yPos = pageHeight - margin;
-                }
-            };
-
-            const drawWrappedText = (
-                text: string,
-                fontSize: number,
-                selectedFont = font,
-                color = rgb(0.1, 0.1, 0.1),
-                indent = 0
-            ) => {
-                const words = text.split(/\s+/).filter(Boolean);
-                if (words.length === 0) return;
-
-                const lineHeight = fontSize * 1.4;
-                const effectiveMaxWidth = maxWidth - indent;
-                let line = '';
-
-                for (const word of words) {
-                    const testLine = line ? `${line} ${word}` : word;
-                    const textWidth = selectedFont.widthOfTextAtSize(testLine, fontSize);
-
-                    if (textWidth > effectiveMaxWidth && line) {
-                        checkNewPage(lineHeight);
-                        currentPage.drawText(line, {
-                            x: margin + indent,
-                            y: yPos,
-                            size: fontSize,
-                            font: selectedFont,
-                            color,
-                        });
-                        yPos -= lineHeight;
-                        line = word;
-                    } else {
-                        line = testLine;
-                    }
-                }
-
-                if (line) {
-                    checkNewPage(lineHeight);
-                    currentPage.drawText(line, {
-                        x: margin + indent,
-                        y: yPos,
-                        size: fontSize,
-                        font: selectedFont,
-                        color,
-                    });
-                    yPos -= lineHeight;
-                }
-            };
-
-            // Traverse DOM body
-            const body = doc.body;
-            if (!body || body.children.length === 0) {
-                // If no body or empty, check raw text
-                const text = doc.body?.textContent || contentToParse;
-                drawWrappedText(text, 12, font);
-            } else {
-                const processNode = (node: Node) => {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        const txt = node.textContent?.trim();
-                        if (txt) {
-                            drawWrappedText(txt, 11, font);
-                            yPos -= 4;
-                        }
-                        return;
-                    }
-
-                    if (node.nodeType !== Node.ELEMENT_NODE) return;
-
-                    const el = node as HTMLElement;
-                    const tagName = el.tagName.toLowerCase();
-
-                    switch (tagName) {
-                        case 'h1': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                yPos -= 10;
-                                drawWrappedText(text, 22, boldFont, rgb(0.05, 0.05, 0.05));
-                                yPos -= 8;
-                            }
-                            break;
-                        }
-                        case 'h2': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                yPos -= 8;
-                                drawWrappedText(text, 18, boldFont, rgb(0.1, 0.1, 0.1));
-                                yPos -= 6;
-                            }
-                            break;
-                        }
-                        case 'h3': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                yPos -= 6;
-                                drawWrappedText(text, 14, boldFont, rgb(0.15, 0.15, 0.15));
-                                yPos -= 4;
-                            }
-                            break;
-                        }
-                        case 'h4':
-                        case 'h5':
-                        case 'h6': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                yPos -= 4;
-                                drawWrappedText(text, 12, boldFont, rgb(0.2, 0.2, 0.2));
-                                yPos -= 4;
-                            }
-                            break;
-                        }
-                        case 'p': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                drawWrappedText(text, 11, font, rgb(0.15, 0.15, 0.15));
-                                yPos -= 6;
-                            }
-                            break;
-                        }
-                        case 'li': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                drawWrappedText(`•  ${text}`, 11, font, rgb(0.15, 0.15, 0.15), 10);
-                                yPos -= 3;
-                            }
-                            break;
-                        }
-                        case 'pre':
-                        case 'code': {
-                            const text = el.textContent?.trim() || '';
-                            if (text) {
-                                const lines = text.split('\n');
-                                for (const l of lines) {
-                                    checkNewPage(14);
-                                    currentPage.drawText(l.substring(0, 80), {
-                                        x: margin + 10,
-                                        y: yPos,
-                                        size: 9,
-                                        font: codeFont,
-                                        color: rgb(0.2, 0.2, 0.4),
-                                    });
-                                    yPos -= 13;
-                                }
-                                yPos -= 4;
-                            }
-                            break;
-                        }
-                        case 'hr': {
-                            checkNewPage(15);
-                            yPos -= 5;
-                            currentPage.drawLine({
-                                start: { x: margin, y: yPos },
-                                end: { x: pageWidth - margin, y: yPos },
-                                thickness: 1,
-                                color: rgb(0.8, 0.8, 0.8),
-                            });
-                            yPos -= 10;
-                            break;
-                        }
-                        case 'table': {
-                            const rows = Array.from(el.querySelectorAll('tr'));
-                            if (rows.length > 0) {
-                                yPos -= 8;
-                                for (const row of rows) {
-                                    const cells = Array.from(row.querySelectorAll('th, td'));
-                                    if (cells.length === 0) continue;
-
-                                    const colWidth = Math.floor(maxWidth / cells.length);
-                                    checkNewPage(18);
-
-                                    cells.forEach((cell, idx) => {
-                                        const isHeader = cell.tagName.toLowerCase() === 'th';
-                                        const cellText = (cell.textContent?.trim() || '').substring(0, 30);
-                                        currentPage.drawText(cellText, {
-                                            x: margin + (idx * colWidth),
-                                            y: yPos,
-                                            size: 10,
-                                            font: isHeader ? boldFont : font,
-                                            color: rgb(0.1, 0.1, 0.1),
-                                        });
-                                    });
-                                    yPos -= 16;
-                                }
-                                yPos -= 6;
-                            }
-                            break;
-                        }
-                        default: {
-                            // Recursively process child nodes
-                            for (let i = 0; i < el.childNodes.length; i++) {
-                                processNode(el.childNodes[i]);
-                            }
-                            break;
-                        }
-                    }
-                };
-
-                for (let i = 0; i < body.childNodes.length; i++) {
-                    processNode(body.childNodes[i]);
-                }
-            }
-
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error converting HTML to PDF:', error);
-            alert('Error converting HTML to PDF. Please ensure the HTML is valid.');
-            setStatus('IDLE');
-        }
+    const convert = () => {
+        tool.run(async () => {
+            const html = mode === 'upload' ? await file?.text() : htmlText;
+            if (!html?.trim()) throw new PdfToolError(mode === 'upload' ? 'Please choose an HTML file.' : 'Please enter or paste HTML code.');
+            const pdfDoc = await renderHtml(html);
+            const filename = mode === 'upload' && file ? `${baseName(file.name)}.pdf` : 'pasted_html.pdf';
+            return { blob: await savePdf(pdfDoc), filename };
+        }, 'Error converting HTML to PDF. Please ensure the HTML is valid.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
         setHtmlText('');
-        setStatus('IDLE');
-        setDownloadUrl(null);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">HTML to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Convert HTML files or raw HTML code into PDF documents.</p>
-            </div>
+            <ToolHeader title="HTML to PDF" subtitle="Convert HTML files or pasted HTML code into a clean, text-searchable PDF document." />
 
-            {status === 'IDLE' && (
-                <div className="max-w-2xl mx-auto">
-                    {/* Mode Toggle */}
-                    <div className="flex justify-center gap-4 mb-6">
-                        <button
-                            onClick={() => setMode('upload')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                mode === 'upload'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                        >
-                            Upload HTML File
-                        </button>
-                        <button
-                            onClick={() => setMode('paste')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                mode === 'paste'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                        >
-                            Paste HTML Code
-                        </button>
-                    </div>
+            {tool.status === 'IDLE' && (
+                <ToolWorkspace>
+                    <ChoiceGroup
+                        label="Input"
+                        value={mode}
+                        onChange={setMode}
+                        options={[
+                            { value: 'upload', title: 'Upload HTML file' },
+                            { value: 'paste', title: 'Paste HTML code' },
+                        ]}
+                    />
 
-                    {mode === 'upload' && !file && (
-                        <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".html,.htm" />
-                    )}
-
-                    {mode === 'upload' && file && (
-                        <div>
-                            <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div style={{ backgroundColor: '#e0f2fe', padding: '12px', borderRadius: '8px' }}>
-                                        <Code className="w-8 h-8" style={{ color: '#0284c7' }} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-medium text-lg">{file.name}</h3>
-                                        <p className="text-gray-500 text-sm">{(file.size / 1024).toFixed(1)} KB</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={removeFile}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                                    title="Remove file"
-                                >
-                                    <Trash2 size={20} />
-                                </button>
-                            </div>
-
-                            <div className="flex justify-center">
-                                <button
-                                    onClick={convertHtmlToPdf}
-                                    className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                                >
-                                    Convert to PDF <ArrowRight size={24} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {mode === 'upload' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".html,.htm" />}
+                    {mode === 'upload' && file && <SelectedFile file={file} onRemove={() => setFile(null)} icon={Code} />}
 
                     {mode === 'paste' && (
-                        <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                HTML Content
-                            </label>
+                        <OptionsCard title="HTML content">
                             <textarea
                                 value={htmlText}
                                 onChange={(e) => setHtmlText(e.target.value)}
                                 placeholder="<h1>My Document</h1><p>Paste your HTML markup here...</p>"
-                                rows={8}
-                                className="w-full p-3 border rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                rows={10}
+                                aria-label="HTML content"
+                                className={toolStyles.input}
+                                style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 14 }}
                             />
-                            <div className="flex justify-center mt-4">
-                                <button
-                                    onClick={convertHtmlToPdf}
-                                    className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                                >
-                                    Convert to PDF <ArrowRight size={24} />
-                                </button>
-                            </div>
-                        </div>
+                        </OptionsCard>
                     )}
-                </div>
+
+                    <Notice>
+                        Headings, paragraphs, lists, tables, quotes and code blocks are converted to real, selectable text.
+                        Stylesheets, scripts and external images are not loaded.
+                    </Notice>
+
+                    {(mode === 'paste' || file) && (
+                        <PrimaryAction onClick={convert} disabled={mode === 'paste' && !htmlText.trim()}>
+                            Convert to PDF <ArrowRight size={22} />
+                        </PrimaryAction>
+                    )}
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Converting HTML to PDF..." />}
+            {tool.status === 'PROCESSING' && <Processing status="Converting HTML to PDF..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={outputFilename}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
+                    message="Your PDF is ready!"
                 />
             )}
         </div>

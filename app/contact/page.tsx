@@ -4,7 +4,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Mail } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: 'Contact Us | MyOnlinePDF',
+    title: 'Contact Us',
     description: 'Get in touch with the MyOnlinePDF team. We are here to help with any questions or feedback.',
     alternates: {
         canonical: '/contact',
@@ -24,7 +24,7 @@ export default function ContactPage() {
             <div className="max-w-xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6 text-center">Contact Us</h1>
                 <p className="text-center text-muted mb-8">
-                    Have questions, suggestions, or need support? We'd love to hear from you.
+                    Have questions, suggestions, or need support? We’d love to hear from you.
                 </p>
 
                 <div className="bg-white p-8 rounded-xl shadow-sm border text-center mb-8">

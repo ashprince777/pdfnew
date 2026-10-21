@@ -1,0 +1,294 @@
+.editor {
+    max-width: 1100px;
+    margin: 0 auto 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0;
+    margin: 0 auto;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--card-surface);
+}
+
+.toolButton,
+.toolActive {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    min-height: var(--touch-target-min);
+    border: none;
+    border-right: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: transparent;
+    color: var(--accent);
+    font-size: var(--text-base);
+    cursor: pointer;
+}
+
+.toolButton:last-child,
+.toolActive:last-child {
+    border-right: none;
+}
+
+.toolButton:hover {
+    background: var(--accent-subtle);
+}
+
+.toolButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.toolActive {
+    background: var(--accent-subtle);
+    font-weight: 600;
+    box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.ocrRow .toolButton {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+}
+
+.pageBar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pageLabel {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.hint {
+    text-align: center;
+    color: var(--text-light);
+    font-size: var(--text-sm);
+}
+
+.ocrRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+}
+
+.pageArea {
+    background: var(--section-alt);
+    border-radius: var(--radius);
+    padding: 24px 12px 56px;
+}
+
+/* Existing text runs: invisible until hovered, like an editor's text boxes. */
+.segment {
+    position: absolute;
+    cursor: text;
+    border-radius: 2px;
+}
+
+.segment:hover {
+    outline: 1px solid var(--accent);
+    background: rgba(79, 70, 229, 0.08);
+}
+
+.cover {
+    position: absolute;
+}
+
+.autoWidth {
+    position: absolute;
+    display: inline-grid;
+    font-family: NotoSansEdit, sans-serif;
+    line-height: 1;
+    z-index: 2;
+}
+
+.sizer,
+.inlineInput {
+    grid-area: 1 / 1;
+    font: inherit;
+    line-height: 1;
+    letter-spacing: normal;
+    white-space: pre;
+    padding: 0 2px 0 0;
+    margin: 0;
+}
+
+.sizer {
+    visibility: hidden;
+    min-width: 2ch;
+}
+
+.inlineInput {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: inherit;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 1px;
+}
+
+.placedText {
+    position: absolute;
+    font-family: NotoSansEdit, sans-serif;
+    line-height: 1;
+    white-space: pre;
+    cursor: text;
+}
+
+.placedText:hover {
+    outline: 1px dashed var(--accent);
+}
+
+.floatingToolbar {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    background: var(--card-surface);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.floatingToolbar button,
+.colorButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 36px;
+    border: none;
+    border-right: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    position: relative;
+}
+
+.floatingToolbar > :last-child {
+    border-right: none;
+}
+
+.floatingToolbar button:hover,
+.colorButton:hover {
+    background: var(--accent-subtle);
+}
+
+.floatingToolbar button.active,
+.floatingToolbar button.active:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.sizeLabel {
+    min-width: 34px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    border-right: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    line-height: 36px;
+}
+
+.colorButton span {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.colorButton input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.imageTarget {
+    position: absolute;
+    outline: 2px dashed var(--accent);
+    background: rgba(79, 70, 229, 0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.imageTarget span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.replacedImage {
+    position: absolute;
+    background: #fff;
+}
+
+.replacedImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.box {
+    position: absolute;
+    cursor: move;
+}
+
+.cornerButton {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--error);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
+
+.footnote {
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--text-light);
+}
+
+.applyBar {
+    position: sticky;
+    bottom: 16px;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.applyBar button {
+    pointer-events: auto;
+    box-shadow: var(--shadow-lg);
+}

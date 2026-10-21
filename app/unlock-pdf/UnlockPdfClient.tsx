@@ -1,172 +1,86 @@
 "use client";
 import { useState } from 'react';
+import { Lock, Unlock } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Lock, Unlock, Trash2 } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
+import { baseName, decryptPdf, isPdfEncrypted, PdfToolError, savePdf } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
 
 export default function UnlockPdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
     const [password, setPassword] = useState('');
-    const [resultMessage, setResultMessage] = useState('');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) setFile(newFiles[0]);
-    };
-
-    const removeFile = () => {
-        setFile(null);
-        setPassword('');
-    };
-
-    const unlockPdf = async () => {
+    const unlockPdf = () => {
         if (!file) return;
-
-        setStatus('PROCESSING');
-
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-
-            // Dynamic import to avoid SSR issues
-            const pdfjsLib = await import('pdfjs-dist');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-            let decryptedDoc;
-            try {
-                const loadingTask = pdfjsLib.getDocument({
-                    data: arrayBuffer,
-                    password: password || undefined,
-                });
-                decryptedDoc = await loadingTask.promise;
-            } catch (err: any) {
-                if (err?.name === 'PasswordException') {
-                    if (!password) {
-                        throw new Error('This PDF is password-protected. Please enter the password to unlock it.');
-                    } else {
-                        throw new Error('Incorrect password. Please verify the password and try again.');
-                    }
-                }
-                throw err;
+        tool.run(async () => {
+            if (!(await isPdfEncrypted(file))) {
+                throw new PdfToolError('This PDF is not password-protected or restricted, so there is nothing to unlock.', 'NOT_ENCRYPTED');
             }
-
-            // Reconstruct the clean, unlocked PDF
-            const newDoc = await PDFDocument.create();
-            const totalPages = decryptedDoc.numPages;
-
-            for (let i = 1; i <= totalPages; i++) {
-                const page = await decryptedDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 2.0 });
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    await (page as any).render({ canvasContext: ctx, canvas, viewport }).promise;
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    const img = await newDoc.embedJpg(imgData);
-
-                    const origViewport = page.getViewport({ scale: 1.0 });
-                    const newPage = newDoc.addPage([origViewport.width, origViewport.height]);
-                    newPage.drawImage(img, {
-                        x: 0,
-                        y: 0,
-                        width: origViewport.width,
-                        height: origViewport.height,
-                    });
-                }
-            }
-
-            const pdfBytes = await newDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setResultMessage('PDF unlocked successfully! All restrictions and passwords have been removed.');
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error unlocking PDF:', error);
-            alert(error instanceof Error ? error.message : 'Could not unlock this file.');
-            setStatus('IDLE');
-        }
+            // An empty password unlocks files that only carry permission restrictions.
+            const pdfDoc = await decryptPdf(file, password);
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_unlocked.pdf` };
+        }, 'Could not unlock this file.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
         setPassword('');
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setResultMessage('');
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Unlock PDF</h1>
-                <p className="text-muted mb-8 text-lg">Remove password protection and restrictions from your PDF.</p>
-            </div>
+            <ToolHeader title="Unlock PDF" subtitle="Remove the password and restrictions from a PDF you have the right to open." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-red-100 p-3 rounded-lg">
-                                    <Lock className="text-red-600 w-8 h-8" />
-                                </div>
-                                <div>
-                                    <h3 className="font-medium text-lg">{file.name}</h3>
-                                    <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                </div>
-                            </div>
-                            <button onClick={removeFile} className="text-gray-400 hover:text-red-500">
-                                <Trash2 />
-                            </button>
-                        </div>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={Lock} />
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Password (if required)
+                    <OptionsCard title="Password">
+                        <div className={toolStyles.field}>
+                            <label className={toolStyles.label} htmlFor="unlock-password">
+                                Password (leave empty if the file opens without one)
                             </label>
                             <input
+                                id="unlock-password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                                onKeyDown={(e) => e.key === 'Enter' && unlockPdf()}
+                                className={toolStyles.input}
                                 placeholder="Enter PDF password"
+                                autoComplete="off"
                             />
-                            <p className="text-xs text-gray-500 mt-2">
-                                Enter the password used to protect this PDF to remove it permanently.
-                            </p>
+                            <span className={toolStyles.hint}>
+                                Files that open freely but block printing or copying can be unlocked without a password.
+                            </span>
                         </div>
+                    </OptionsCard>
 
-                        <button
-                            onClick={unlockPdf}
-                            className="w-full btn btn-primary btn-lg flex items-center justify-center gap-2"
-                        >
-                            <Unlock size={20} /> Unlock PDF
-                        </button>
-                    </div>
-                </div>
+                    <Notice>
+                        The original text, images, links and bookmarks are kept. Only the encryption is removed.
+                    </Notice>
+
+                    <PrimaryAction onClick={unlockPdf}>
+                        <Unlock size={20} /> Unlock PDF
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Removing security restrictions..." />}
+            {tool.status === 'PROCESSING' && <Processing status="Removing security restrictions..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`unlocked_${file?.name}`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message={resultMessage}
+                    message="PDF unlocked! The password and restrictions have been removed."
                 />
             )}
         </div>

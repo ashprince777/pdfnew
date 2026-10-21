@@ -1,42 +1,26 @@
 import { MetadataRoute } from 'next';
+import { ALL_TOOLS } from '@/lib/tools';
 
 const BASE_URL = 'https://myonlinepdf.com';
+// Bump when page content changes meaningfully; a per-request date tells crawlers everything changes daily.
+const LAST_UPDATED = new Date('2026-10-21');
+
+const STATIC_PAGES = ['/all-tools', '/faq', '/about', '/contact', '/privacy', '/terms', '/deletion-policy'];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const routes = [
-        '',
-        '/merge-pdf',
-        '/split-pdf',
-        '/compress-pdf',
-        '/protect-pdf',
-        '/unlock-pdf',
-        '/rotate-pdf',
-        '/organize-pdf',
-        '/jpg-to-pdf',
-        '/pdf-to-jpg',
-        '/pdf-to-powerpoint',
-        // Planned/Placeholder tools - enabling them in sitemap for discoverability if pages exist
-        '/word-to-pdf',
-        '/excel-to-pdf',
-        '/powerpoint-to-pdf',
-        '/pdf-to-word',
-        '/pdf-to-excel',
-        '/watermark-pdf',
-        '/repair-pdf',
-        '/html-to-pdf',
-        '/add-page-numbers',
-        '/remove-pages',
-        '/sign-pdf',
-        '/crop-pdf',
-        '/edit-pdf',
-        '/compare-pdf',
-        '/pdf-to-pdfa',
-    ].map((route) => ({
-        url: `${BASE_URL}${route}`,
-        lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: route === '' ? 1 : 0.8,
-    }));
-
-    return routes;
+    return [
+        { url: BASE_URL, lastModified: LAST_UPDATED, changeFrequency: 'weekly', priority: 1 },
+        ...ALL_TOOLS.map((tool) => ({
+            url: `${BASE_URL}${tool.href}`,
+            lastModified: LAST_UPDATED,
+            changeFrequency: 'monthly' as const,
+            priority: 0.8,
+        })),
+        ...STATIC_PAGES.map((path) => ({
+            url: `${BASE_URL}${path}`,
+            lastModified: LAST_UPDATED,
+            changeFrequency: 'yearly' as const,
+            priority: 0.3,
+        })),
+    ];
 }

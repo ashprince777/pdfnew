@@ -1,102 +1,160 @@
 "use client";
 import { useState } from 'react';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Lock } from 'lucide-react';
-import styles from './page.module.css';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
+import { baseName, loadPdf, PdfToolError, savePdf } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+const MIN_PASSWORD_LENGTH = 4;
+
+function randomOwnerPassword(): string {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export default function ProtectClient() {
     const [file, setFile] = useState<File | null>(null);
     const [password, setPassword] = useState('');
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [allowPrinting, setAllowPrinting] = useState(true);
+    const [allowCopying, setAllowCopying] = useState(true);
+    const [allowEditing, setAllowEditing] = useState(true);
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (files: File[]) => {
-        if (files.length > 0) setFile(files[0]);
-    };
+    const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
+    const mismatch = confirmPassword.length > 0 && password !== confirmPassword;
+    const canSubmit = password.length >= MIN_PASSWORD_LENGTH && password === confirmPassword;
 
-    const protectPdf = async () => {
-        if (!file || !password) return;
-        setStatus('PROCESSING');
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('password', password);
-
-            const response = await fetch('/api/protect', {
-                method: 'POST',
-                body: formData,
+    const protectPdf = () => {
+        if (!file || !canSubmit) return;
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
+            if (pdfDoc.getPageCount() === 0) throw new PdfToolError('This PDF has no pages.');
+            pdfDoc.encrypt({
+                userPassword: password,
+                // A separate random owner password makes the restrictions below enforceable.
+                ownerPassword: randomOwnerPassword(),
+                permissions: {
+                    printing: allowPrinting ? 'highResolution' : false,
+                    copying: allowCopying,
+                    modifying: allowEditing,
+                    annotating: allowEditing,
+                    fillingForms: true,
+                    contentAccessibility: true,
+                    documentAssembly: allowEditing,
+                },
             });
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || 'Server failed to protect PDF');
-            }
-
-            const blob = await response.blob();
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error protecting PDF:', error);
-            alert('An error occurred during protection: ' + (error instanceof Error ? error.message : String(error)));
-            setStatus('IDLE');
-        }
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_protected.pdf` };
+        }, 'Could not protect this PDF. Please try another file.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
         setPassword('');
-        setStatus('IDLE');
-        setDownloadUrl(null);
+        setConfirmPassword('');
     };
+
+    const checkbox = (label: string, checked: boolean, onChange: (v: boolean) => void) => (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', minHeight: 32 }}>
+            <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ width: 18, height: 18 }} />
+            <span>{label}</span>
+        </label>
+    );
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1>Protect PDF File</h1>
-                <p className="text-muted">Encrypt your PDF with a password.</p>
-            </div>
+            <ToolHeader title="Protect PDF File" subtitle="Encrypt your PDF with a password using AES-256, right in your browser." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} />
+
+                    <OptionsCard title="Set a password">
+                        <div style={{ display: 'grid', gap: 14 }}>
+                            <div className={toolStyles.field}>
+                                <label className={toolStyles.label} htmlFor="protect-password">Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        id="protect-password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter password..."
+                                        autoComplete="new-password"
+                                        className={toolStyles.input}
+                                        style={{ paddingRight: 48 }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        className={toolStyles.iconButton}
+                                        style={{ position: 'absolute', right: 0, top: 0 }}
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                                {passwordTooShort && (
+                                    <span className={toolStyles.hint} style={{ color: 'var(--error)' }}>
+                                        Use at least {MIN_PASSWORD_LENGTH} characters.
+                                    </span>
+                                )}
+                            </div>
+                            <div className={toolStyles.field}>
+                                <label className={toolStyles.label} htmlFor="protect-confirm">Confirm password</label>
+                                <input
+                                    id="protect-confirm"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Repeat password..."
+                                    autoComplete="new-password"
+                                    className={toolStyles.input}
+                                />
+                                {mismatch && (
+                                    <span className={toolStyles.hint} style={{ color: 'var(--error)' }}>
+                                        Passwords do not match.
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </OptionsCard>
+
+                    <OptionsCard title="Permissions for people who open the file">
+                        <div style={{ display: 'grid', gap: 4 }}>
+                            {checkbox('Allow printing', allowPrinting, setAllowPrinting)}
+                            {checkbox('Allow copying text and images', allowCopying, setAllowCopying)}
+                            {checkbox('Allow editing, commenting and page changes', allowEditing, setAllowEditing)}
+                        </div>
+                    </OptionsCard>
+
+                    <Notice>
+                        Keep your password safe. It cannot be recovered. Everything happens on your device; the file and
+                        password are never uploaded.
+                    </Notice>
+
+                    <PrimaryAction onClick={protectPdf} disabled={!canSubmit}>
+                        Protect PDF <Lock size={20} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className={styles.workspace}>
-                    <div className={styles.fileItem}>
-                        <span className={styles.fileName}>{file.name}</span>
-                        <button onClick={reset} className={styles.removeBtn}>Change</button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status="Encrypting PDF with AES-256..." />}
 
-                    <div className={styles.inputGroup}>
-                        <label>Set a Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter password..."
-                            className={styles.input}
-                        />
-                    </div>
-
-                    <button onClick={protectPdf} className="btn btn-primary btn-lg mt-4" disabled={!password}>
-                        Protect PDF <Lock size={20} style={{ marginLeft: '10px' }} />
-                    </button>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status="Encrypting PDF (Server-side)..." />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`protected_${file?.name}`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
+                    message="Your PDF is now password-protected!"
                 />
             )}
         </div>

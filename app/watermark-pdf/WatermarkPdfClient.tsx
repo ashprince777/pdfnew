@@ -1,159 +1,322 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { rgb, degrees, type PDFDocument, type PDFImage } from '@cantoo/pdf-lib';
+import { Stamp, ArrowRight, ImageUp } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Stamp, ArrowRight, Trash2 } from 'lucide-react';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { baseName, embedUnicodeFont, getVisualFrame, hexToRgbComponents, loadPdf, PdfToolError, savePdf, toDrawableText } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
 
-import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+type Kind = 'text' | 'image';
+type Layout = 'diagonal' | 'horizontal';
+type Placement = 'center' | 'tiled';
+
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+/** Embeds the watermark image (WebP and unusual encodings go through a canvas as PNG). */
+async function embedWatermarkImage(doc: PDFDocument, file: File): Promise<PDFImage> {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    try {
+        if (bytes[0] === 0x89 && bytes[1] === 0x50) return await doc.embedPng(bytes);
+        if (bytes[0] === 0xff && bytes[1] === 0xd8) return await doc.embedJpg(bytes);
+    } catch {
+        // fall back to re-encoding below
+    }
+    let bitmap: ImageBitmap;
+    try {
+        bitmap = await createImageBitmap(file);
+    } catch {
+        throw new PdfToolError('The watermark image could not be read. Please use a PNG or JPG file.');
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    canvas.width = canvas.height = 0;
+    if (!blob) throw new PdfToolError('The watermark image could not be read.');
+    return doc.embedPng(new Uint8Array(await blob.arrayBuffer()));
+}
+
+/** Lower-left corner that puts the centre of a w×h box, rotated by `angle` degrees, at (cx, cy). */
+function rotatedOrigin(cx: number, cy: number, w: number, h: number, angle: number) {
+    const rad = (angle * Math.PI) / 180;
+    return {
+        x: cx - (w * Math.cos(rad) - h * Math.sin(rad)) / 2,
+        y: cy - (w * Math.sin(rad) + h * Math.cos(rad)) / 2,
+    };
+}
 
 export default function WatermarkPdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [kind, setKind] = useState<Kind>('text');
     const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageSize, setImageSize] = useState(40);
+    const [placement, setPlacement] = useState<Placement>('center');
+    const [layout, setLayout] = useState<Layout>('diagonal');
+    const [opacity, setOpacity] = useState(30);
+    const [color, setColor] = useState('#cc1a1a');
+    const imageInputRef = useRef<HTMLInputElement | null>(null);
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) setFile(newFiles[0]);
-    };
+    // Preview URL for the chosen watermark image, released when it changes or on unmount.
+    const imageUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile]);
+    useEffect(() => () => {
+        if (imageUrl) URL.revokeObjectURL(imageUrl);
+    }, [imageUrl]);
 
-    const removeFile = () => {
-        setFile(null);
-        setWatermarkText('CONFIDENTIAL');
-    };
+    const angle = layout === 'diagonal' ? 45 : 0;
+    const canApply = kind === 'text' ? watermarkText.trim().length > 0 : imageFile !== null;
 
-    const applyWatermark = async () => {
+    const applyWatermark = () => {
         if (!file) return;
+        tool.run(async () => {
+            const pdfDoc = await loadPdf(file);
 
-        setStatus('PROCESSING');
-
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const rawText = watermarkText.trim() || 'CONFIDENTIAL';
-            const text = rawText
-                .replace(/[\u201C\u201D]/g, '"')
-                .replace(/[\u2018\u2019]/g, "'")
-                .replace(/[\u2013\u2014]/g, '-')
-                .replace(/[\u2022\u00B7]/g, '* ')
-                .replace(/[^\x00-\xFF]/g, ' ');
-
-            const pages = pdfDoc.getPages();
-            for (const page of pages) {
-                const { width, height } = page.getSize();
-                const fontSize = Math.max(24, Math.min(width, height) / 10);
-                const textWidth = font.widthOfTextAtSize(text, fontSize);
-                const textHeight = font.heightAtSize(fontSize);
-
-                // Center coordinates accounting for 45 deg rotation
-                const rad = (45 * Math.PI) / 180;
-                const cos = Math.cos(rad);
-                const sin = Math.sin(rad);
-                const cx = width / 2;
-                const cy = height / 2;
-                const x = cx - (textWidth * cos - textHeight * sin) / 2;
-                const y = cy - (textWidth * sin + textHeight * cos) / 2;
-
-                page.drawText(text, {
-                    x,
-                    y,
-                    size: fontSize,
-                    font,
-                    color: rgb(0.8, 0.1, 0.1),
-                    opacity: 0.3,
-                    rotate: degrees(45),
-                });
+            if (kind === 'image') {
+                if (!imageFile) throw new PdfToolError('Please choose a watermark image.');
+                // Embedded once and reused on every page, so the file only grows by one image.
+                const image = await embedWatermarkImage(pdfDoc, imageFile);
+                for (const page of pdfDoc.getPages()) {
+                    const frame = getVisualFrame(page);
+                    const w = (frame.width * imageSize) / 100;
+                    const h = w * (image.height / image.width);
+                    const centres: [number, number][] = [];
+                    if (placement === 'center') {
+                        centres.push([frame.width / 2, frame.height / 2]);
+                    } else {
+                        // Tile with a gap of roughly half the image size.
+                        const stepX = w * 1.5;
+                        const stepY = Math.max(h, w * 0.5) * 1.6;
+                        for (let y = stepY / 2; y < frame.height + stepY / 2; y += stepY) {
+                            const offset = (Math.round(y / stepY) % 2) * (stepX / 2);
+                            for (let x = stepX / 2 - offset; x < frame.width + stepX / 2; x += stepX) centres.push([x, y]);
+                        }
+                    }
+                    for (const [cx, cy] of centres) {
+                        const origin = rotatedOrigin(cx, cy, w, h, angle);
+                        page.drawImage(image, {
+                            ...frame.toPdf(origin.x, origin.y),
+                            width: w,
+                            height: h,
+                            opacity: opacity / 100,
+                            rotate: degrees(frame.rotation + angle),
+                        });
+                    }
+                }
+            } else {
+                const font = await embedUnicodeFont(pdfDoc, 'bold');
+                const text = toDrawableText(font, watermarkText.trim());
+                if (!text.trim()) throw new PdfToolError('Please enter the watermark text.');
+                const [r, g, b] = hexToRgbComponents(color);
+                for (const page of pdfDoc.getPages()) {
+                    const frame = getVisualFrame(page);
+                    // Size the text to span ~70% of the page along its direction.
+                    const span = layout === 'diagonal' ? Math.hypot(frame.width, frame.height) : frame.width;
+                    const fontSize = Math.min(160, (span * 0.7) / font.widthOfTextAtSize(text, 1));
+                    const origin = rotatedOrigin(
+                        frame.width / 2,
+                        frame.height / 2,
+                        font.widthOfTextAtSize(text, fontSize),
+                        font.heightAtSize(fontSize, { descender: false }),
+                        angle
+                    );
+                    page.drawText(text, {
+                        ...frame.toPdf(origin.x, origin.y),
+                        size: fontSize,
+                        font,
+                        color: rgb(r, g, b),
+                        opacity: opacity / 100,
+                        rotate: degrees(frame.rotation + angle),
+                    });
+                }
             }
 
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error applying watermark:', error);
-            alert('Failed to apply watermark. Please try again.');
-            setStatus('IDLE');
-        }
+            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_watermarked.pdf` };
+        }, 'Failed to apply watermark. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
     };
+
+    const previewTiles = placement === 'tiled' ? 9 : 1;
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">Add Watermark to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Stamp your documents with text or images.</p>
-            </div>
+            <ToolHeader title="Add Watermark to PDF" subtitle="Stamp text or your own image (logo, stamp, signature) across every page of your PDF." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-blue-100 p-3 rounded-lg">
-                                    <Stamp className="text-blue-600 w-8 h-8" />
-                                </div>
-                                <div>
-                                    <h3 className="font-medium text-lg">{file.name}</h3>
-                                    <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                </div>
-                            </div>
-                            <button onClick={removeFile} className="text-gray-400 hover:text-red-500">
-                                <Trash2 />
-                            </button>
-                        </div>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={Stamp} />
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Watermark Text
-                            </label>
-                            <input
-                                type="text"
-                                value={watermarkText}
-                                onChange={(e) => setWatermarkText(e.target.value)}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="Enter text (e.g., DRAFT)"
+                    <OptionsCard title="Watermark">
+                        <div style={{ display: 'grid', gap: 16 }}>
+                            <ChoiceGroup
+                                label="Watermark type"
+                                value={kind}
+                                onChange={setKind}
+                                options={[
+                                    { value: 'text', title: 'Text', text: 'e.g. CONFIDENTIAL, DRAFT' },
+                                    { value: 'image', title: 'Image', text: 'Your logo, stamp or seal' },
+                                ]}
                             />
-                        </div>
 
-                        <div className="p-12 border-2 border-dashed rounded-lg bg-gray-50 flex items-center justify-center mb-6 relative overflow-hidden">
-                            <p className="text-gray-400 font-bold text-4xl transform -rotate-12 opacity-20 select-none">
+                            {kind === 'text' ? (
+                                <div className={toolStyles.field}>
+                                    <label className={toolStyles.label} htmlFor="wm-text">Text</label>
+                                    <input id="wm-text" type="text" value={watermarkText} onChange={(e) => setWatermarkText(e.target.value)} className={toolStyles.input} placeholder="e.g. DRAFT" maxLength={80} />
+                                </div>
+                            ) : (
+                                <div className={toolStyles.field}>
+                                    <span className={toolStyles.label}>Image</span>
+                                    <input
+                                        ref={imageInputRef}
+                                        type="file"
+                                        accept={IMAGE_TYPES.join(',')}
+                                        aria-label="Watermark image"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => {
+                                            const picked = e.target.files?.[0];
+                                            e.target.value = '';
+                                            if (!picked) return;
+                                            if (!IMAGE_TYPES.includes(picked.type)) return tool.notify('Please choose a PNG, JPG or WebP image.');
+                                            if (picked.size > 20 * 1024 * 1024) return tool.notify('The watermark image must be smaller than 20 MB.');
+                                            setImageFile(picked);
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        className="btn btn-outline"
+                                        style={{ gap: 8, justifyContent: 'flex-start', overflow: 'hidden' }}
+                                    >
+                                        <ImageUp size={18} />
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {imageFile ? imageFile.name : 'Choose image (PNG, JPG or WebP)'}
+                                        </span>
+                                    </button>
+                                    <span className={toolStyles.hint}>Tip: a PNG with a transparent background looks best.</span>
+                                </div>
+                            )}
+
+                            <ChoiceGroup
+                                label="Layout"
+                                value={layout}
+                                onChange={setLayout}
+                                options={[
+                                    { value: 'diagonal', title: 'Diagonal' },
+                                    { value: 'horizontal', title: 'Horizontal' },
+                                ]}
+                            />
+
+                            {kind === 'image' && (
+                                <ChoiceGroup
+                                    label="Placement"
+                                    value={placement}
+                                    onChange={setPlacement}
+                                    options={[
+                                        { value: 'center', title: 'Center', text: 'One image in the middle' },
+                                        { value: 'tiled', title: 'Tiled', text: 'Repeated across the page' },
+                                    ]}
+                                />
+                            )}
+
+                            <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                                <div className={toolStyles.field}>
+                                    <label className={toolStyles.label} htmlFor="wm-opacity">Opacity: {opacity}%</label>
+                                    <input id="wm-opacity" type="range" min={5} max={100} value={opacity} onChange={(e) => setOpacity(parseInt(e.target.value))} />
+                                </div>
+                                {kind === 'text' ? (
+                                    <div className={toolStyles.field}>
+                                        <label className={toolStyles.label} htmlFor="wm-color">Color</label>
+                                        <input id="wm-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 56, height: 36, border: 'none', background: 'none', cursor: 'pointer' }} />
+                                    </div>
+                                ) : (
+                                    <div className={toolStyles.field}>
+                                        <label className={toolStyles.label} htmlFor="wm-size">Size: {imageSize}% of page width</label>
+                                        <input id="wm-size" type="range" min={5} max={100} value={imageSize} onChange={(e) => setImageSize(parseInt(e.target.value))} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </OptionsCard>
+
+                    <div
+                        aria-hidden="true"
+                        style={{
+                            position: 'relative',
+                            aspectRatio: '1 / 1.3',
+                            maxWidth: 260,
+                            width: '100%',
+                            margin: '0 auto',
+                            background: '#fff',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 8,
+                            overflow: 'hidden',
+                            display: 'grid',
+                            gridTemplateColumns: previewTiles > 1 ? 'repeat(3, 1fr)' : '1fr',
+                            placeItems: 'center',
+                            boxShadow: 'var(--shadow-sm)',
+                        }}
+                    >
+                        {kind === 'image' ? (
+                            imageUrl ? (
+                                Array.from({ length: previewTiles }, (_, i) => (
+                                    // eslint-disable-next-line @next/next/no-img-element -- local blob: URL preview
+                                    <img
+                                        key={i}
+                                        src={imageUrl}
+                                        alt=""
+                                        style={{
+                                            width: `${placement === 'tiled' ? Math.min(90, imageSize * 3) : imageSize}%`,
+                                            opacity: opacity / 100,
+                                            transform: `rotate(${-angle}deg)`,
+                                        }}
+                                    />
+                                ))
+                            ) : (
+                                <span style={{ fontSize: 12, color: '#94a3b8' }}>Choose an image</span>
+                            )
+                        ) : (
+                            <span
+                                style={{
+                                    transform: `rotate(${-angle}deg)`,
+                                    color,
+                                    opacity: opacity / 100,
+                                    fontWeight: 800,
+                                    fontSize: Math.max(14, 220 / Math.max(watermarkText.length, 4)),
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
                                 {watermarkText || 'WATERMARK'}
-                            </p>
-                            <p className="absolute bottom-2 right-2 text-xs text-gray-400">Preview</p>
-                        </div>
-
-                        <button
-                            onClick={applyWatermark}
-                            className="w-full btn btn-primary btn-lg flex items-center justify-center gap-2"
-                        >
-                            Apply Watermark <ArrowRight size={20} />
-                        </button>
+                            </span>
+                        )}
+                        <span style={{ position: 'absolute', bottom: 6, right: 8, fontSize: 11, color: '#94a3b8' }}>Preview</span>
                     </div>
-                </div>
+
+                    <PrimaryAction onClick={applyWatermark} disabled={!canApply}>
+                        Apply Watermark <ArrowRight size={20} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Applying watermark..." />}
+            {tool.status === 'PROCESSING' && <Processing status="Applying watermark..." />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`watermarked_${file?.name}`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
+                    message="Watermark applied to every page!"
                 />
             )}
         </div>

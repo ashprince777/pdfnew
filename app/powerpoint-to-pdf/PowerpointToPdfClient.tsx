@@ -3,9 +3,12 @@ import { useState } from 'react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { Presentation, ArrowRight, Trash2 } from 'lucide-react';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { Presentation, ArrowRight } from 'lucide-react';
+import { PDFDocument } from '@cantoo/pdf-lib';
 import JSZip from 'jszip';
+import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName, pdfBytesToBlob, PdfToolError } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
 
 interface SlideElement {
     type: 'shape' | 'image' | 'table';
@@ -48,32 +51,8 @@ interface ParsedSlide {
 
 export default function PowerpointToPdfClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [progress, setProgress] = useState('Converting PowerPoint to PDF...');
-
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) setFile(newFiles[0]);
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    // Sanitize text to avoid WinAnsi crashes in pdf-lib
-    const sanitizeTextForPdf = (str: string): string => {
-        return str
-            .replace(/[\u201C\u201D]/g, '"')
-            .replace(/[\u2018\u2019\u201A\u0060\u00B4]/g, "'")
-            .replace(/[\u2013\u2014\u2015]/g, '-')
-            .replace(/[\u2022\u25CF\u00B7]/g, '* ')
-            .replace(/\u2026/g, '...')
-            .replace(/[^\x00-\x7F]/g, (char) => {
-                const code = char.charCodeAt(0);
-                if (code >= 32 && code <= 255) return char;
-                return ' ';
-            });
-    };
+    const tool = useToolRunner();
+    const setProgress = tool.setProgress;
 
     const parsePptx = async (fileData: ArrayBuffer): Promise<ParsedSlide[]> => {
         const zip = await JSZip.loadAsync(fileData);
@@ -395,24 +374,23 @@ export default function PowerpointToPdfClient() {
         return slides;
     };
 
-    const convertToPdf = async () => {
+    const convertToPdf = () => {
         if (!file) return;
-
-        setStatus('PROCESSING');
-        setProgress('Analyzing presentation slides...');
-
-        try {
+        tool.run(async () => {
+            setProgress('Analyzing presentation slides...');
             const html2canvasModule = await import('html2canvas');
             const html2canvas = html2canvasModule.default || html2canvasModule;
 
             const arrayBuffer = await file.arrayBuffer();
-            const parsedSlides = await parsePptx(arrayBuffer);
-
-            if (parsedSlides.length === 0) {
-                alert('No slides found in this presentation.');
-                setStatus('IDLE');
-                return;
+            const header = new Uint8Array(arrayBuffer.slice(0, 4));
+            if (header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0) {
+                throw new PdfToolError('This is an older PowerPoint 97-2003 (.ppt) file. Open it in PowerPoint and use "Save As" → PowerPoint Presentation (.pptx), then convert it here.');
             }
+            if (!(header[0] === 0x50 && header[1] === 0x4b)) {
+                throw new PdfToolError('This file is not a valid PowerPoint (.pptx) presentation.');
+            }
+            const parsedSlides = await parsePptx(arrayBuffer);
+            if (parsedSlides.length === 0) throw new PdfToolError('No slides found in this presentation.');
 
             const pdfDoc = await PDFDocument.create();
 
@@ -555,79 +533,40 @@ export default function PowerpointToPdfClient() {
             }
 
             setProgress('Finalizing PDF presentation...');
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error: any) {
-            console.error('Error converting PPTX to PDF:', error);
-            alert('Error converting PowerPoint file: ' + (error?.message || 'Please check the file.'));
-            setStatus('IDLE');
-        }
+            return { blob: pdfBytesToBlob(await pdfDoc.save()), filename: `${baseName(file.name)}.pdf` };
+        }, 'Error converting the PowerPoint file. Please check the file.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setProgress('Converting PowerPoint to PDF...');
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">PowerPoint to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Convert your PowerPoint presentations to PDF with full background colors, layout cards, images, and fonts preserved.</p>
-            </div>
+            <ToolHeader title="PowerPoint to PDF" subtitle="Convert your PowerPoint presentations (PPTX) to PDF with backgrounds, shapes, images and text." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pptx,.ppt" />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pptx,.ppt" />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={Presentation} />
+                    <Notice>Slides are rebuilt in your browser. Text, shapes, tables and images are supported; charts, SmartArt and animations are not.</Notice>
+                    <PrimaryAction onClick={convertToPdf}>
+                        Convert to PDF <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div style={{ backgroundColor: '#fff0ec', padding: '12px', borderRadius: '8px' }}>
-                                <Presentation className="w-8 h-8" style={{ color: '#d24726' }} />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={removeFile}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                            title="Remove file"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting PowerPoint to PDF...'} />}
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={convertToPdf}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                        >
-                            Convert to PDF <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status={progress} />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'presentation'}.pdf`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message="Your PowerPoint presentation PDF is ready!"
+                    message="Your presentation PDF is ready!"
                 />
             )}
         </div>

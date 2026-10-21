@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'HTML to PDF Online - Convert Webpages to PDF Free | MyOnlinePDF',
+    title: 'HTML to PDF Online - Convert Webpages to PDF Free',
     description: 'Convert HTML files to PDF online. Upload your HTML file and download a PDF version. Free and secure.',
     alternates: {
         canonical: '/html-to-pdf',

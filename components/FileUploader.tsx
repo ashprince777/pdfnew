@@ -1,6 +1,6 @@
 "use client";
-import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { addRecentToolHref } from '@/lib/storage';
 import styles from './FileUploader.module.css';
@@ -10,7 +10,22 @@ interface FileUploaderProps {
     accept?: string;
     multiple?: boolean;
     maxFileSizeMB?: number;
+    /** What the user is choosing, e.g. "Word Document". Derived from `accept` when omitted. */
     toolName?: string;
+    /** "compact" renders a single "Add more files" button for adding to an existing selection. */
+    variant?: 'default' | 'compact';
+}
+
+function describeAccept(accept: string, multiple: boolean): string {
+    const exts = accept.toLowerCase();
+    let noun = 'File';
+    if (exts.includes('.pdf')) noun = 'PDF File';
+    else if (/\.(jpe?g|png|webp)/.test(exts)) noun = 'Image';
+    else if (exts.includes('.doc')) noun = 'Word Document';
+    else if (exts.includes('.ppt')) noun = 'PowerPoint File';
+    else if (exts.includes('.xls')) noun = 'Excel File';
+    else if (exts.includes('.htm')) noun = 'HTML File';
+    return multiple ? `${noun}s` : noun;
 }
 
 export default function FileUploader({
@@ -19,107 +34,97 @@ export default function FileUploader({
     multiple = false,
     maxFileSizeMB = 100,
     toolName,
+    variant = 'default',
 }: FileUploaderProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const dragDepth = useRef(0);
 
     // Track recently used tool on mount
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            addRecentToolHref(window.location.pathname);
-        }
+        addRecentToolHref(window.location.pathname);
     }, []);
 
-    const validateFiles = (files: File[]): boolean => {
-        setErrorMessage(null);
+    const allowedExtensions = accept
+        .split(',')
+        .map((ext) => ext.trim().toLowerCase().replace(/^\./, ''))
+        .filter(Boolean);
 
-        if (files.length === 0) {
-            setErrorMessage('No files were selected. Please select a valid file.');
-            return false;
-        }
-
-        const allowedExtensions = accept
-            .split(',')
-            .map((ext) => ext.trim().toLowerCase().replace('.', ''));
-
+    const validateFiles = (files: File[]): string | null => {
+        if (files.length === 0) return 'No files were selected. Please select a valid file.';
         for (const file of files) {
-            // Check size limit
-            const sizeMB = file.size / (1024 * 1024);
-            if (sizeMB > maxFileSizeMB) {
-                setErrorMessage(
-                    `File "${file.name}" exceeds the maximum recommended size of ${maxFileSizeMB}MB for in-browser processing.`
-                );
-                return false;
+            if (file.size / (1024 * 1024) > maxFileSizeMB) {
+                return `File "${file.name}" exceeds the maximum size of ${maxFileSizeMB}MB for in-browser processing.`;
             }
-
-            // Check file extension if accept specified
-            if (accept && accept !== '*/*' && allowedExtensions.length > 0) {
+            if (file.size === 0) return `File "${file.name}" is empty.`;
+            if (accept !== '*/*' && allowedExtensions.length > 0) {
                 const ext = file.name.split('.').pop()?.toLowerCase();
                 if (!ext || !allowedExtensions.includes(ext)) {
-                    setErrorMessage(
-                        `Invalid file format for "${file.name}". Please upload a supported file (${accept}).`
-                    );
-                    return false;
+                    return `Invalid file format for "${file.name}". Please upload a supported file (${accept}).`;
                 }
             }
         }
-
-        return true;
+        return null;
     };
 
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-    }, []);
-
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-    }, []);
-
-    const handleDrop = useCallback(
-        (e: React.DragEvent) => {
-            e.preventDefault();
-            setIsDragging(false);
-
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                const files = Array.from(e.dataTransfer.files);
-                if (validateFiles(files)) {
-                    onFilesSelected(multiple ? files : [files[0]]);
-                }
-            }
-        },
-        [multiple, onFilesSelected, accept, maxFileSizeMB]
-    );
-
-    const handleFileInput = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            if (e.target.files && e.target.files.length > 0) {
-                const files = Array.from(e.target.files);
-                if (validateFiles(files)) {
-                    onFilesSelected(multiple ? files : [files[0]]);
-                }
-            }
-        },
-        [multiple, onFilesSelected, accept, maxFileSizeMB]
-    );
+    const handleFiles = (list: FileList | null) => {
+        if (!list || list.length === 0) return;
+        const files = Array.from(list);
+        const selected = multiple ? files : [files[0]];
+        const error = validateFiles(selected);
+        setErrorMessage(error);
+        if (!error) onFilesSelected(selected);
+    };
 
     const triggerFilePicker = () => {
         setErrorMessage(null);
         fileInputRef.current?.click();
     };
 
+    const hiddenInput = (
+        <input
+            ref={fileInputRef}
+            type="file"
+            className={styles.hiddenInput}
+            accept={accept}
+            multiple={multiple}
+            onChange={(e) => {
+                handleFiles(e.target.files);
+                // Allow picking the same file again after removing it.
+                e.target.value = '';
+            }}
+            aria-hidden="true"
+            tabIndex={-1}
+        />
+    );
+
+    if (variant === 'compact') {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <button type="button" className="btn btn-outline" onClick={triggerFilePicker} style={{ gap: 8 }}>
+                    <Plus size={18} aria-hidden="true" /> Add more {describeAccept(accept, true).replace(/(Files|Images|Documents)/, (w) => w.toLowerCase())}
+                </button>
+                {errorMessage && (
+                    <p role="alert" style={{ color: 'var(--error)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>
+                        {errorMessage}
+                    </p>
+                )}
+                {hiddenInput}
+            </div>
+        );
+    }
+
+    const heading = `Choose ${toolName || describeAccept(accept, multiple)}`;
+
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto 40px' }}>
-            {/* Prominent Privacy Assurance Header */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                 <PrivacyTrustBadge variant="prominent" />
             </div>
 
-            {/* Error State with Recovery Action */}
             {errorMessage ? (
-                <div className={`${styles.uploader} ${styles.errorState}`}>
+                <div className={`${styles.uploader} ${styles.errorState}`} role="alert">
                     <div className={styles.errorBox}>
                         <div
                             style={{
@@ -142,6 +147,7 @@ export default function FileUploader({
                             {errorMessage}
                         </p>
                         <button
+                            type="button"
                             onClick={triggerFilePicker}
                             className="btn btn-primary"
                             style={{
@@ -158,12 +164,26 @@ export default function FileUploader({
                     </div>
                 </div>
             ) : (
-                /* Standard Dual-Mode Upload Zone */
                 <div
                     className={`${styles.uploader} ${isDragging ? styles.dragging : ''}`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
+                    onDragEnter={(e) => {
+                        e.preventDefault();
+                        dragDepth.current++;
+                        setIsDragging(true);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragLeave={(e) => {
+                        e.preventDefault();
+                        // Child elements fire their own enter/leave events; only reset when leaving the zone.
+                        dragDepth.current = Math.max(0, dragDepth.current - 1);
+                        if (dragDepth.current === 0) setIsDragging(false);
+                    }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        dragDepth.current = 0;
+                        setIsDragging(false);
+                        handleFiles(e.dataTransfer.files);
+                    }}
                     onClick={triggerFilePicker}
                 >
                     <div className={styles.content}>
@@ -171,13 +191,9 @@ export default function FileUploader({
                             <Upload size={36} />
                         </div>
 
-                        <h3 className={styles.title}>
-                            {multiple ? 'Choose PDF Files' : `Choose ${toolName || 'PDF File'}`}
-                        </h3>
+                        <h3 className={styles.title}>{heading}</h3>
 
-                        <p className={styles.subtitle}>
-                            Drag and drop here, or tap to browse from your device
-                        </p>
+                        <p className={styles.subtitle}>Drag and drop here, or tap to browse from your device</p>
 
                         <button
                             type="button"
@@ -209,14 +225,7 @@ export default function FileUploader({
                 </div>
             )}
 
-            <input
-                ref={fileInputRef}
-                type="file"
-                className={styles.hiddenInput}
-                accept={accept}
-                multiple={multiple}
-                onChange={handleFileInput}
-            />
+            {hiddenInput}
         </div>
     );
 }

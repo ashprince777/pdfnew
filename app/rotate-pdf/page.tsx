@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import RotatePdfClient from './RotatePdfClient';
 
 export const metadata: Metadata = {
-    title: 'Rotate PDF Online - Free PDF Rotator | MyOnlinePDF',
+    title: 'Rotate PDF Online - Free PDF Rotator',
     description: 'Rotate PDF pages permanently. Rotate single pages or the entire document 90, 180, or 270 degrees. Private and secure.',
     alternates: {
         canonical: '/rotate-pdf',

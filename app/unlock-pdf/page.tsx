@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import UnlockPdfClient from './UnlockPdfClient';
 
 export const metadata: Metadata = {
-    title: 'Unlock PDF Online - Remove Password from PDF | MyOnlinePDF',
+    title: 'Unlock PDF Online - Remove Password from PDF',
     description: 'Remove passwords and security restrictions from PDF files. Unlock your documents for editing and printing instantly.',
     alternates: {
         canonical: '/unlock-pdf',

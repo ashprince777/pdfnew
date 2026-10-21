@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'PDF to PDF/A Converter Online Free - ISO Archival Standard | MyOnlinePDF',
+    title: 'PDF to PDF/A Converter Online Free - ISO Archival Standard',
     description: 'Convert PDF files to ISO standardized PDF/A-1b and PDF/A-2b format for long term archiving. Free, secure, and processed in your browser.',
     alternates: {
         canonical: '/pdf-to-pdfa',

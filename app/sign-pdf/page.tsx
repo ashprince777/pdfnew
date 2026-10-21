@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Sign PDF Online Free - Add Electronic Signature to PDF | MyOnlinePDF',
+    title: 'Sign PDF Online Free - Add Electronic Signature to PDF',
     description: 'Sign PDF documents online for free. Draw your signature or type your name. 100% private and processed locally in your browser.',
     alternates: {
         canonical: '/sign-pdf',

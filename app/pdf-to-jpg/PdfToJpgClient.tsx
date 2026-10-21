@@ -1,142 +1,104 @@
 "use client";
 import { useState } from 'react';
+import JSZip from 'jszip';
+import { FileImage, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { FileImage, ArrowRight, Trash2 } from 'lucide-react';
-import JSZip from 'jszip';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction } from '@/components/ToolUI';
+import { baseName } from '@/lib/pdf';
+import { canvasToBlob, openPdfjsDocument, releaseCanvas, renderPageToCanvas } from '@/lib/pdfjs';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type Dpi = '96' | '150' | '300';
+type Format = 'jpg' | 'png';
 
 export default function PdfToJpgClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [progress, setProgress] = useState('');
+    const [dpi, setDpi] = useState<Dpi>('150');
+    const [format, setFormat] = useState<Format>('jpg');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) {
-            setFile(newFiles[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    const convertToJpg = async () => {
+    const convert = () => {
         if (!file) return;
+        tool.run(async () => {
+            const pdfDoc = await openPdfjsDocument(await file.arrayBuffer());
+            const total = pdfDoc.numPages;
+            const name = baseName(file.name);
+            const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+            const images: { name: string; blob: Blob }[] = [];
 
-        setStatus('PROCESSING');
-
-        try {
-            // Dynamic import to avoid SSR issues
-            const pdfjsLib = await import('pdfjs-dist');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdfDoc = await loadingTask.promise;
-            const totalPages = pdfDoc.numPages;
-
-            const zip = new JSZip();
-
-            for (let i = 1; i <= totalPages; i++) {
-                setProgress(`Converting page ${i} of ${totalPages}...`);
+            for (let i = 1; i <= total; i++) {
+                tool.setProgress(`Converting page ${i} of ${total}...`);
                 const page = await pdfDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 2.0 }); // High quality
-
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                if (context) {
-                    await (page.render({ canvasContext: context, viewport } as any).promise);
-
-                    // Convert canvas to JPG blob
-                    const blob: Blob = await new Promise((resolve) => {
-                        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92);
-                    });
-
-                    const arrBuf = await blob.arrayBuffer();
-                    zip.file(`${file.name.replace(/\.[^/.]+$/, '')}_page_${i}.jpg`, arrBuf);
-                }
+                const canvas = await renderPageToCanvas(page, parseInt(dpi) / 72);
+                images.push({ name: `${name}_page_${String(i).padStart(String(total).length, '0')}.${format}`, blob: await canvasToBlob(canvas, mime, 0.92) });
+                releaseCanvas(canvas);
+                page.cleanup();
             }
+            await pdfDoc.destroy();
 
-            setProgress('Creating ZIP file...');
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            if (images.length === 1) return { blob: images[0].blob, filename: images[0].name };
 
-            // Revoke any previous URL
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(zipBlob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error("Error converting PDF to JPG:", error);
-            alert("Error converting file. Please try again.");
-            setStatus('IDLE');
-        }
+            tool.setProgress('Creating ZIP file...');
+            const zip = new JSZip();
+            images.forEach((img) => zip.file(img.name, img.blob));
+            return { blob: await zip.generateAsync({ type: 'blob' }), filename: `${name}_images.zip` };
+        }, 'Error converting file. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setProgress('');
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">PDF to JPG</h1>
-                <p className="text-muted mb-8 text-lg">Convert each PDF page into a high-quality JPG image.</p>
-            </div>
+            <ToolHeader title="PDF to JPG" subtitle="Convert each PDF page into a high-quality JPG or PNG image." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
-            )}
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-orange-100 p-3 rounded-lg">
-                                <FileImage className="text-orange-600 w-8 h-8" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={FileImage} />
+                    <OptionsCard title="Image options">
+                        <div style={{ display: 'grid', gap: 14 }}>
+                            <ChoiceGroup
+                                label="Resolution"
+                                value={dpi}
+                                onChange={setDpi}
+                                options={[
+                                    { value: '96', title: 'Screen', text: '96 DPI, small files' },
+                                    { value: '150', title: 'Standard', text: '150 DPI' },
+                                    { value: '300', title: 'Print', text: '300 DPI, large files' },
+                                ]}
+                            />
+                            <ChoiceGroup
+                                label="Format"
+                                value={format}
+                                onChange={setFormat}
+                                options={[
+                                    { value: 'jpg', title: 'JPG', text: 'Smaller files' },
+                                    { value: 'png', title: 'PNG', text: 'Lossless, sharp text' },
+                                ]}
+                            />
                         </div>
-                        <button
-                            onClick={removeFile}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                            title="Remove file"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
-
-                    <div className="flex justify-center">
-                        <button
-                            onClick={convertToJpg}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                        >
-                            Convert to JPG <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
+                    </OptionsCard>
+                    <PrimaryAction onClick={convert}>
+                        Convert to {format.toUpperCase()} <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status={progress || "Converting PDF to JPG..."} />}
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting PDF to images...'} />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'images'}_images.zip`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message="Your JPG images are ready in a ZIP archive!"
+                    message={tool.result.filename.endsWith('.zip') ? 'Your images are ready in a ZIP archive!' : 'Your image is ready!'}
                 />
             )}
         </div>

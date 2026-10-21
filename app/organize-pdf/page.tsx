@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import OrganizePdfClient from './OrganizePdfClient';
 
 export const metadata: Metadata = {
-    title: 'Organize PDF Online - Sort, Delete & Move Pages | MyOnlinePDF',
+    title: 'Organize PDF Online - Sort, Delete & Move Pages',
     description: 'Organize PDF pages online. Reorder, move, or delete pages from your PDF document. Drag and drop interface.',
     alternates: {
         canonical: '/organize-pdf',

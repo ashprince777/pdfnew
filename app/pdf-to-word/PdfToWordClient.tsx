@@ -1,9 +1,6 @@
 "use client";
 import { useState } from 'react';
-import FileUploader from '@/components/FileUploader';
-import Processing from '@/components/Processing';
-import DownloadResult from '@/components/DownloadResult';
-import { FileText, ArrowRight, Trash2 } from 'lucide-react';
+import { FileText, ArrowRight } from 'lucide-react';
 import {
     Document,
     Packer,
@@ -19,424 +16,272 @@ import {
     BorderStyle,
 } from 'docx';
 import JSZip from 'jszip';
+import FileUploader from '@/components/FileUploader';
+import Processing from '@/components/Processing';
+import DownloadResult from '@/components/DownloadResult';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName } from '@/lib/pdf';
+import { canvasToBlob, openPdfjsDocument, releaseCanvas, renderPageToCanvas } from '@/lib/pdfjs';
+import { getPositionedText, groupIntoRows, rowText, splitIntoCells, type TextRow } from '@/lib/textLayout';
+import { useToolRunner } from '@/lib/useToolRunner';
 
-interface TextLineCluster {
-    ty: number;
-    items: {
-        str: string;
-        tx: number;
-        ty: number;
-        width: number;
-        height: number;
-        fontName?: string;
-    }[];
+type Mode = 'editable' | 'layout';
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const A4_TWIPS = { width: 11906, height: 16838 };
+const MARGIN_TWIPS = 720;
+const USABLE_WIDTH_TWIPS = A4_TWIPS.width - 2 * MARGIN_TWIPS;
+
+/** Column widths (twips) proportional to where each column starts on the PDF page. */
+function columnWidthsTwips(starts: number[], pageWidth: number): number[] {
+    const spans = starts.map((x, k) => Math.max(20, (k + 1 < starts.length ? starts[k + 1] : pageWidth - Math.min(starts[0], 72)) - x));
+    const total = spans.reduce((sum, w) => sum + w, 0);
+    const widths = spans.map((w) => Math.floor((w / total) * USABLE_WIDTH_TWIPS));
+    widths[widths.length - 1] += USABLE_WIDTH_TWIPS - widths.reduce((sum, w) => sum + w, 0);
+    return widths;
+}
+
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
+/** Removes characters that are illegal in XML 1.0 (Word refuses to open such files). */
+const sanitizeText = (str: string) => str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]/g, '');
+
+interface Line {
+    text: string;
+    x: number;
+    right: number;
+    y: number;
+    size: number;
+    bold: boolean;
+    italic: boolean;
+    cells: { x: number; text: string }[] | null;
+}
+
+function toLine(row: TextRow): Line {
+    const first = row.items[0];
+    const last = row.items[row.items.length - 1];
+    const size = Math.max(...row.items.map((i) => i.height));
+    const cells = splitIntoCells(row.items);
+    const wideGaps = cells.length >= 2 && cells.length <= 6 && cells.some((c, i) => i > 0 && c.x - cells[i - 1].x > 80);
+    return {
+        text: sanitizeText(rowText(row.items)),
+        x: first.x,
+        right: last.x + last.width,
+        y: row.y,
+        size,
+        bold: /bold|black|heavy|semibold/i.test(first.fontName),
+        italic: /italic|oblique/i.test(first.fontName),
+        cells: wideGaps ? cells.map((c) => ({ ...c, text: sanitizeText(c.text) })) : null,
+    };
+}
+
+/** Rebuilds paragraphs: consecutive lines with the same indent, size and normal spacing are joined. */
+function buildPageContent(rows: TextRow[], pageWidth: number): (Paragraph | Table)[] {
+    const lines = rows.map(toLine).filter((l) => l.text);
+    const out: (Paragraph | Table)[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+        const halfPts = Math.round(Math.min(48, Math.max(8, line.size)) * 2);
+
+        if (line.cells) {
+            // Consecutive lines with the same column layout become one table.
+            const rowsOfTable: Line[] = [line];
+            while (i + rowsOfTable.length < lines.length) {
+                const next = lines[i + rowsOfTable.length];
+                if (!next.cells || next.cells.length !== line.cells.length) break;
+                rowsOfTable.push(next);
+            }
+            const widths = columnWidthsTwips(line.cells.map((c) => c.x), pageWidth);
+            out.push(
+                new Table({
+                    // Fixed twip (DXA) widths: percentage widths are written as "100%", which
+                    // Word 2007 cannot open ("problems with the contents").
+                    width: { size: USABLE_WIDTH_TWIPS, type: WidthType.DXA },
+                    columnWidths: widths,
+                    borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER },
+                    rows: rowsOfTable.map(
+                        (row) =>
+                            new TableRow({
+                                children: row.cells!.map(
+                                    (cell, c) =>
+                                        new TableCell({
+                                            width: { size: widths[c], type: WidthType.DXA },
+                                            borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+                                            children: [
+                                                new Paragraph({
+                                                    children: [new TextRun({ text: cell.text, size: Math.round(Math.min(48, Math.max(8, row.size)) * 2), bold: row.bold, font: 'Calibri' })],
+                                                }),
+                                            ],
+                                        })
+                                ),
+                            })
+                    ),
+                })
+            );
+            i += rowsOfTable.length;
+            continue;
+        }
+
+        // Join wrapped lines of the same paragraph.
+        let text = line.text;
+        let j = i + 1;
+        while (j < lines.length) {
+            const prev = lines[j - 1];
+            const next = lines[j];
+            const sameStyle = !next.cells && Math.abs(next.size - line.size) < 0.6 && next.bold === line.bold;
+            const sameIndent = Math.abs(next.x - line.x) < 4;
+            const normalSpacing = next.y - prev.y < line.size * 1.75;
+            const prevFilled = prev.right > pageWidth * 0.6; // a short previous line ends the paragraph
+            if (!(sameStyle && sameIndent && normalSpacing && prevFilled)) break;
+            text = text.endsWith('-') ? text.slice(0, -1) + next.text : `${text} ${next.text}`;
+            j++;
+        }
+
+        const center = (line.x + line.right) / 2;
+        const isCentered = j === i + 1 && Math.abs(center - pageWidth / 2) < 30 && line.x > 72;
+        const indentTwips = isCentered ? 0 : Math.round(Math.max(0, line.x - 50) * 20);
+        const gapAfter = j < lines.length ? lines[j].y - lines[j - 1].y - line.size : 0;
+
+        out.push(
+            new Paragraph({
+                children: [new TextRun({ text, size: halfPts, bold: line.bold || line.size >= 15, italics: line.italic, font: 'Calibri' })],
+                alignment: isCentered ? AlignmentType.CENTER : AlignmentType.LEFT,
+                indent: indentTwips > 200 ? { left: Math.min(indentTwips, 4000) } : undefined,
+                spacing: { after: Math.round(Math.min(Math.max(gapAfter, 2), 24) * 20) },
+            })
+        );
+        i = j;
+    }
+    return out;
+}
+
+/** Makes the docx package output open in every Word version (2007+). */
+async function fixDocxForWord(raw: ArrayBuffer): Promise<Blob> {
+    const zip = await JSZip.loadAsync(raw);
+    let xml = (await zip.file('word/document.xml')?.async('text')) || '';
+    let docPr = 1;
+    // Unique ids, and only the attributes Word 2007 knows (`title` was added in Word 2010).
+    xml = xml.replace(/<wp:docPr\b[^>]*?(\/?)>/g, (_match, selfClosing: string) => {
+        const id = docPr++;
+        return `<wp:docPr id="${id}" name="Picture ${id}"${selfClosing}>`;
+    });
+    let cNv = 1;
+    xml = xml.replace(/<pic:cNvPr\s+id="[^"]*"/g, () => `<pic:cNvPr id="${cNv++}"`);
+    zip.file('word/document.xml', sanitizeText(xml));
+    // <w:compatSetting> is a Word 2010 element in the main namespace; Word 2007 refuses files containing it.
+    const settings = await zip.file('word/settings.xml')?.async('text');
+    if (settings) zip.file('word/settings.xml', settings.replace(/<w:compat>[\s\S]*?<\/w:compat>/, ''));
+    return zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME });
 }
 
 export default function PdfToWordClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [progress, setProgress] = useState('');
+    const [mode, setMode] = useState<Mode>('editable');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) {
-            setFile(newFiles[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    // Sanitize string to remove any illegal XML 1.0 control characters
-    const sanitizeText = (str: string): string => {
-        if (!str) return '';
-        return str
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]/g, '')
-            .trim();
-    };
-
-    const convertToWord = async () => {
+    const convertToWord = () => {
         if (!file) return;
+        tool.run(async () => {
+            const pdfDoc = await openPdfjsDocument(await file.arrayBuffer());
+            const children: (Paragraph | Table)[] = [];
+            const usableWidthPt = (A4_TWIPS.width - 2 * MARGIN_TWIPS) / 20;
+            const usableHeightPt = (A4_TWIPS.height - 2 * MARGIN_TWIPS) / 20;
+            let foundText = false;
 
-        setStatus('PROCESSING');
-        setProgress('Loading PDF document...');
-
-        try {
-            // Dynamic import to avoid SSR issues
-            const pdfjsLib = await import('pdfjs-dist');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdfDoc = await loadingTask.promise;
-            const totalPages = pdfDoc.numPages;
-
-            const allChildren: (Paragraph | Table)[] = [];
-
-            for (let i = 1; i <= totalPages; i++) {
-                setProgress(`Processing page ${i} of ${totalPages}: preserving layout & images...`);
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                tool.setProgress(`Processing page ${i} of ${pdfDoc.numPages}...`);
                 const page = await pdfDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 1.0 });
 
-                const pageWidthPt = viewport.width;
-                const pageHeightPt = viewport.height;
-
-                // 1. Render page image to preserve visual fidelity, logos, stamps, and layout
-                const renderScale = 1.5;
-                const renderViewport = page.getViewport({ scale: renderScale });
-                const canvas = document.createElement('canvas');
-                canvas.width = renderViewport.width;
-                canvas.height = renderViewport.height;
-                const ctx = canvas.getContext('2d');
-
-                let pageImgBytes: Uint8Array | null = null;
-                if (ctx) {
-                    await (page as any).render({ canvasContext: ctx, canvas, viewport: renderViewport }).promise;
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-                    const base64Data = dataUrl.split(',')[1];
-                    const binaryStr = atob(base64Data);
-                    const bytes = new Uint8Array(binaryStr.length);
-                    for (let b = 0; b < binaryStr.length; b++) {
-                        bytes[b] = binaryStr.charCodeAt(b);
-                    }
-                    pageImgBytes = bytes;
-                }
-
-                // Add preserved page image at top of the page section
-                if (pageImgBytes) {
-                    // Fit image neatly within margins (standard A4 printable width ~480-520 pt)
-                    const displayWidth = Math.min(500, Math.round(pageWidthPt * 0.85));
-                    const displayHeight = Math.round((displayWidth / pageWidthPt) * pageHeightPt);
-
-                    allChildren.push(
+                if (mode === 'layout') {
+                    const canvas = await renderPageToCanvas(page, 2);
+                    const jpeg = new Uint8Array(await (await canvasToBlob(canvas, 'image/jpeg', 0.88)).arrayBuffer());
+                    releaseCanvas(canvas);
+                    const { width, height } = page.getViewport({ scale: 1 });
+                    const scale = Math.min(usableWidthPt / width, usableHeightPt / height);
+                    // ImageRun sizes are in pixels at 96 DPI.
+                    children.push(
                         new Paragraph({
-                            children: [
-                                new ImageRun({
-                                    data: pageImgBytes,
-                                    type: 'jpg',
-                                    transformation: {
-                                        width: displayWidth,
-                                        height: displayHeight,
-                                    },
-                                    altText: {
-                                        name: `Page ${i} Document Visual`,
-                                        title: `Page ${i} Visual`,
-                                        description: `Original layout and graphics for Page ${i}`,
-                                    },
-                                }),
-                            ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { after: 200 },
+                            children: [new ImageRun({ type: 'jpg', data: jpeg, transformation: { width: Math.round(width * scale * 1.333), height: Math.round(height * scale * 1.333) } })],
                         })
                     );
+                } else {
+                    const { items, width } = await getPositionedText(page);
+                    if (items.length) foundText = true;
+                    children.push(...buildPageContent(groupIntoRows(items), width));
                 }
+                page.cleanup();
+                if (i < pdfDoc.numPages) children.push(new Paragraph({ children: [new PageBreak()] }));
+            }
+            await pdfDoc.destroy();
 
-                // 2. Extract editable text content
-                setProgress(`Processing page ${i} of ${totalPages}: extracting editable text...`);
-                const textContent = await page.getTextContent();
-                const clusters: TextLineCluster[] = [];
-
-                for (const item of textContent.items) {
-                    if ('str' in item && item.str.trim()) {
-                        const cleanStr = sanitizeText(item.str);
-                        if (!cleanStr) continue;
-
-                        const transform = (item as any).transform;
-                        const tx = transform[4];
-                        const ty = transform[5];
-                        const width = (item as any).width || 10;
-                        const height = Math.abs(transform[0]) || (item as any).height || 12;
-                        const fontName = (item as any).fontName;
-
-                        let foundCluster = clusters.find((c) => Math.abs(c.ty - ty) < 4.0);
-                        if (!foundCluster) {
-                            foundCluster = { ty, items: [] };
-                            clusters.push(foundCluster);
-                        }
-                        foundCluster.items.push({
-                            str: cleanStr,
-                            tx,
-                            ty,
-                            width,
-                            height,
-                            fontName,
-                        });
-                    }
-                }
-
-                // Sort lines from top of the page to bottom (descending ty in PDF)
-                clusters.sort((a, b) => b.ty - a.ty);
-
-                // Section header for editable text
-                allChildren.push(
-                    new Paragraph({
-                        children: [
-                            new TextRun({
-                                text: `--- Page ${i} Editable Content ---`,
-                                bold: true,
-                                size: 20,
-                                color: '64748B',
-                            }),
-                        ],
-                        alignment: AlignmentType.CENTER,
-                        spacing: { before: 150, after: 150 },
-                    })
+            if (mode === 'editable' && !foundText) {
+                children.unshift(
+                    new Paragraph({ children: [new TextRun({ text: 'No selectable text was found in this PDF. It may be a scanned document. Try the "Exact layout" option instead.', italics: true })] })
                 );
-
-                // Process lines into structured paragraphs or tables
-                for (let cIdx = 0; cIdx < clusters.length; cIdx++) {
-                    const cluster = clusters[cIdx];
-                    cluster.items.sort((a, b) => a.tx - b.tx);
-
-                    // Check if this line is multi-column (e.g. form fields, insurance key-values)
-                    // If items are separated by a large horizontal gap (> 60 pt)
-                    const hasMultiCol = cluster.items.length >= 2 && cluster.items.some((it, idx) => {
-                        if (idx === 0) return false;
-                        const prev = cluster.items[idx - 1];
-                        return it.tx - (prev.tx + prev.width) > 60;
-                    });
-
-                    if (hasMultiCol && cluster.items.length <= 4) {
-                        // Create a clean 2-4 column table for structured key-values
-                        const cells = cluster.items.map((it) => {
-                            const isBold = /bold|black|heavy|medium/i.test(it.fontName || '');
-                            return new TableCell({
-                                width: { size: Math.round(100 / cluster.items.length), type: WidthType.PERCENTAGE },
-                                borders: {
-                                    top: { style: BorderStyle.NONE },
-                                    bottom: { style: BorderStyle.NONE },
-                                    left: { style: BorderStyle.NONE },
-                                    right: { style: BorderStyle.NONE },
-                                },
-                                children: [
-                                    new Paragraph({
-                                        children: [
-                                            new TextRun({
-                                                text: it.str,
-                                                size: Math.max(18, Math.min(36, Math.round((it.height || 11) * 2))),
-                                                bold: isBold,
-                                                font: 'Calibri',
-                                            }),
-                                        ],
-                                        spacing: { before: 40, after: 40 },
-                                    }),
-                                ],
-                            });
-                        });
-
-                        allChildren.push(
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: {
-                                    top: { style: BorderStyle.NONE },
-                                    bottom: { style: BorderStyle.NONE },
-                                    left: { style: BorderStyle.NONE },
-                                    right: { style: BorderStyle.NONE },
-                                    insideHorizontal: { style: BorderStyle.NONE },
-                                    insideVertical: { style: BorderStyle.NONE },
-                                },
-                                rows: [new TableRow({ children: cells })],
-                            })
-                        );
-                        continue;
-                    }
-
-                    // Otherwise, combine line items into a natural flowing paragraph
-                    let fullLineText = '';
-                    let lastRight = -1;
-
-                    for (const it of cluster.items) {
-                        if (lastRight >= 0 && it.tx - lastRight > 2) {
-                            fullLineText += ' ';
-                        }
-                        fullLineText += it.str;
-                        lastRight = it.tx + it.width;
-                    }
-
-                    fullLineText = sanitizeText(fullLineText);
-                    if (!fullLineText) continue;
-
-                    const minX = Math.min(...cluster.items.map((it) => it.tx));
-                    const maxX = Math.max(...cluster.items.map((it) => it.tx + it.width));
-                    const maxH = Math.max(...cluster.items.map((it) => it.height));
-                    const firstFont = cluster.items[0]?.fontName || '';
-                    const isBold = /bold|black|heavy|medium/i.test(firstFont) || maxH > 14;
-                    const isItalic = /italic|oblique/i.test(firstFont);
-
-                    // Check if line is centered
-                    const lineCenter = (minX + maxX) / 2;
-                    const pageCenter = pageWidthPt / 2;
-                    const isCentered = Math.abs(lineCenter - pageCenter) < 45 && fullLineText.length < 80;
-
-                    // Indentation matching PDF position (if not centered)
-                    const leftIndentDxa = isCentered ? 0 : Math.max(0, Math.min(3000, Math.round((minX - 40) * 15)));
-
-                    const fontSizeHalfPt = Math.max(18, Math.min(48, Math.round(maxH * 2)));
-
-                    allChildren.push(
-                        new Paragraph({
-                            children: [
-                                new TextRun({
-                                    text: fullLineText,
-                                    size: fontSizeHalfPt,
-                                    bold: isBold,
-                                    italics: isItalic,
-                                    font: 'Calibri',
-                                    color: '000000',
-                                }),
-                            ],
-                            alignment: isCentered ? AlignmentType.CENTER : AlignmentType.LEFT,
-                            indent: leftIndentDxa > 100 ? { left: leftIndentDxa } : undefined,
-                            spacing: {
-                                before: isBold ? 80 : 30,
-                                after: isBold ? 80 : 40,
-                            },
-                        })
-                    );
-                }
-
-                // Add PageBreak between PDF pages (except last)
-                if (i < totalPages) {
-                    allChildren.push(
-                        new Paragraph({
-                            children: [new PageBreak()],
-                        })
-                    );
-                }
             }
 
-            setProgress('Formatting Word document and validating XML...');
-
+            tool.setProgress('Building Word document...');
             const doc = new Document({
                 sections: [
                     {
-                        properties: {
-                            page: {
-                                size: {
-                                    width: 11906, // A4
-                                    height: 16838,
-                                },
-                                margin: {
-                                    top: 720,
-                                    bottom: 720,
-                                    left: 720,
-                                    right: 720,
-                                    header: 360,
-                                    footer: 360,
-                                },
-                            },
-                        },
-                        children: allChildren,
+                        properties: { page: { size: A4_TWIPS, margin: { top: MARGIN_TWIPS, bottom: MARGIN_TWIPS, left: MARGIN_TWIPS, right: MARGIN_TWIPS } } },
+                        children,
                     },
                 ],
             });
-
-            const rawDocxBuffer = await Packer.toArrayBuffer(doc);
-
-            // Post-process with JSZip to ensure 100% compliance with Microsoft Word (Word 2007, 2010, 2016, 365)
-            const zip = await JSZip.loadAsync(rawDocxBuffer);
-            let docXml = await zip.file('word/document.xml')?.async('text') || '';
-
-            // 1. Ensure all wp:docPr drawing IDs and names are unique and non-empty
-            let docPrCounter = 1;
-            docXml = docXml.replace(/<wp:docPr\s+id="[^"]*"\s*name="[^"]*"/g, () => {
-                const cur = docPrCounter++;
-                return `<wp:docPr id="${cur}" name="Picture ${cur}"`;
-            });
-            docXml = docXml.replace(/<wp:docPr\s+id="[^"]*"/g, () => {
-                const cur = docPrCounter++;
-                return `<wp:docPr id="${cur}" name="Picture ${cur}"`;
-            });
-
-            // 2. Ensure all pic:cNvPr drawing IDs are unique
-            let cNvCounter = 1;
-            docXml = docXml.replace(/<pic:cNvPr\s+id="[^"]*"/g, () => {
-                return `<pic:cNvPr id="${cNvCounter++}"`;
-            });
-
-            // 3. Strip any remaining illegal XML 1.0 control characters
-            docXml = docXml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]/g, '');
-
-            zip.file('word/document.xml', docXml);
-
-            const finalBlob = await zip.generateAsync({
-                type: 'blob',
-                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            });
-
-            // Revoke any previous URL
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(finalBlob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error: any) {
-            console.error("Error generating DOCX:", error);
-            alert("Error generating file: " + (error?.message || "Please try again."));
-            setStatus('IDLE');
-        }
+            const blob = await fixDocxForWord(await Packer.toArrayBuffer(doc));
+            return { blob, filename: `${baseName(file.name)}.docx` };
+        }, 'Error generating the Word document. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setProgress('');
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">PDF to Word</h1>
-                <p className="text-muted mb-8 text-lg">Convert your PDF files to editable Word documents (DOCX), preserving images, layout, and editable text positions.</p>
-            </div>
+            <ToolHeader title="PDF to Word" subtitle="Convert your PDF into an editable Word document (DOCX)." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={FileText} />
+                    <OptionsCard title="Conversion mode">
+                        <ChoiceGroup
+                            label="Conversion mode"
+                            value={mode}
+                            onChange={setMode}
+                            options={[
+                                { value: 'editable', title: 'Editable text', text: 'Paragraphs and simple tables you can edit' },
+                                { value: 'layout', title: 'Exact layout', text: 'Pages as images, looks identical' },
+                            ]}
+                        />
+                    </OptionsCard>
+                    <Notice>
+                        {mode === 'editable'
+                            ? 'Text, headings and simple tables are rebuilt as editable Word content. Images and complex layouts are not carried over.'
+                            : 'Each page is placed as a picture so it looks exactly like the PDF, but the text cannot be edited.'}
+                    </Notice>
+                    <PrimaryAction onClick={convertToWord}>
+                        Convert to Word <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-red-100 p-3 rounded-lg">
-                                <FileText className="text-red-600 w-8 h-8" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={removeFile}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                            title="Remove file"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting PDF to Word...'} />}
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={convertToWord}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                        >
-                            Convert to Word <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status={progress || "Converting PDF to Word..."} />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}.docx`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
-                    message="Your Word document is ready! Layout, images, and editable text have been preserved."
+                    message="Your Word document is ready!"
                 />
             )}
         </div>

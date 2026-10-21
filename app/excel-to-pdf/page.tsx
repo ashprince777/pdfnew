@@ -5,7 +5,7 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import ExcelToPdfClient from './ExcelToPdfClient';
 
 export const metadata: Metadata = {
-    title: 'Excel to PDF Converter - Convert XLS to PDF Online | MyOnlinePDF',
+    title: 'Excel to PDF Converter - Convert XLS to PDF Online',
     description: 'Convert Excel spreadsheets (XLS, XLSX) to PDF format online. Create easy-to-read reports from your data.',
     alternates: {
         canonical: '/excel-to-pdf',

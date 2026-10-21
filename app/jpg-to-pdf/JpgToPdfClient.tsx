@@ -1,136 +1,231 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { PDFDocument, type PDFImage } from '@cantoo/pdf-lib';
+import { ArrowRight, ArrowUp, ArrowDown, Trash2, GripVertical } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { FileImage, ArrowRight, Trash2 } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
+import ReorderableList from '@/components/ReorderableList';
+import { ToolHeader, ToolWorkspace, OptionsCard, ChoiceGroup, PrimaryAction, toolStyles } from '@/components/ToolUI';
+import { formatBytes, PdfToolError, savePdf } from '@/lib/pdf';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type PageSize = 'fit' | 'a4' | 'letter';
+type Margin = 'none' | 'small' | 'large';
+
+const PAGE_SIZES: Record<Exclude<PageSize, 'fit'>, [number, number]> = { a4: [595.28, 841.89], letter: [612, 792] };
+const MARGINS: Record<Margin, number> = { none: 0, small: 20, large: 48 };
+const ACCEPT = '.jpg,.jpeg,.png,.webp,.gif,.bmp';
+
+interface ImageItem {
+    id: string;
+    file: File;
+    previewUrl: string;
+}
+
+let nextId = 0;
+
+/** Reads the EXIF orientation of a JPEG (1 = upright). */
+function jpegOrientation(bytes: Uint8Array): number {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xffd8) return 1;
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+        const marker = view.getUint16(offset);
+        const size = view.getUint16(offset + 2);
+        if (marker === 0xffe1 && view.getUint32(offset + 4) === 0x45786966) {
+            const tiff = offset + 10;
+            const little = view.getUint16(tiff) === 0x4949;
+            const ifd = tiff + view.getUint32(tiff + 4, little);
+            const entries = view.getUint16(ifd, little);
+            for (let i = 0; i < entries; i++) {
+                const entry = ifd + 2 + i * 12;
+                if (entry + 10 > view.byteLength) break;
+                if (view.getUint16(entry, little) === 0x0112) return view.getUint16(entry + 8, little);
+            }
+            return 1;
+        }
+        if ((marker & 0xff00) !== 0xff00) break;
+        offset += 2 + size;
+    }
+    return 1;
+}
+
+/** Re-encodes through a canvas; browsers apply EXIF orientation when decoding. */
+async function reencodeAsJpeg(file: File): Promise<ArrayBuffer> {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas is not available');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    canvas.width = canvas.height = 0;
+    if (!blob) throw new Error('Could not encode image');
+    return blob.arrayBuffer();
+}
+
+async function embedImage(pdfDoc: PDFDocument, file: File): Promise<PDFImage> {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+    const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+    try {
+        if (isPng) return await pdfDoc.embedPng(bytes);
+        if (isJpeg && jpegOrientation(bytes) === 1) return await pdfDoc.embedJpg(bytes);
+    } catch {
+        // fall through to the canvas path for unusual encodings
+    }
+    try {
+        return await pdfDoc.embedJpg(await reencodeAsJpeg(file));
+    } catch {
+        throw new PdfToolError(`"${file.name}" could not be read as an image.`);
+    }
+}
 
 export default function JpgToPdfClient() {
-    const [files, setFiles] = useState<File[]>([]);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [items, setItems] = useState<ImageItem[]>([]);
+    const [pageSize, setPageSize] = useState<PageSize>('a4');
+    const [margin, setMargin] = useState<Margin>('small');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        setFiles((prev) => [...prev, ...newFiles]);
+    const itemsRef = useRef(items);
+    useEffect(() => {
+        itemsRef.current = items;
+    }, [items]);
+    // Release preview URLs when the component unmounts.
+    useEffect(() => () => itemsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl)), []);
+
+    const handleFilesSelected = (files: File[]) => {
+        setItems((prev) => [...prev, ...files.map((file) => ({ id: `img-${++nextId}`, file, previewUrl: URL.createObjectURL(file) }))]);
     };
 
-    const removeFile = (index: number) => {
-        setFiles((prev) => prev.filter((_, i) => i !== index));
+    const removeItem = (id: string) => {
+        const item = items.find((i) => i.id === id);
+        if (item) URL.revokeObjectURL(item.previewUrl);
+        setItems((prev) => prev.filter((i) => i.id !== id));
     };
 
-    const convertToPdf = async () => {
-        if (files.length === 0) return;
-
-        setStatus('PROCESSING');
-
-        try {
+    const convertToPdf = () => {
+        if (items.length === 0) return;
+        tool.run(async () => {
             const pdfDoc = await PDFDocument.create();
+            for (let i = 0; i < items.length; i++) {
+                tool.setProgress(`Adding image ${i + 1} of ${items.length}...`);
+                const image = await embedImage(pdfDoc, items[i].file);
+                const m = MARGINS[margin];
 
-            for (const file of files) {
-                const arrayBuffer = await file.arrayBuffer();
-                let image;
-                try {
-                    const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
-                    image = isPng
-                        ? await pdfDoc.embedPng(arrayBuffer)
-                        : await pdfDoc.embedJpg(arrayBuffer);
-                } catch {
-                    // Fallback using canvas for WebP, BMP, GIF, or unusual JPEG/PNG encodings
-                    const imgBitmap = await createImageBitmap(new Blob([arrayBuffer]));
-                    const canvas = document.createElement('canvas');
-                    canvas.width = imgBitmap.width;
-                    canvas.height = imgBitmap.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(imgBitmap, 0, 0);
-                    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                    image = await pdfDoc.embedJpg(jpegDataUrl);
+                if (pageSize === 'fit') {
+                    // 96 DPI: a 1920px wide image becomes a 20-inch page instead of 26 inches.
+                    const w = image.width * 0.75;
+                    const h = image.height * 0.75;
+                    pdfDoc.addPage([w + 2 * m, h + 2 * m]).drawImage(image, { x: m, y: m, width: w, height: h });
+                    continue;
                 }
-                const page = pdfDoc.addPage([image.width, image.height]);
-                page.drawImage(image, {
-                    x: 0,
-                    y: 0,
-                    width: image.width,
-                    height: image.height,
-                });
+
+                const [shortSide, longSide] = PAGE_SIZES[pageSize];
+                const landscape = image.width > image.height;
+                const [pw, ph] = landscape ? [longSide, shortSide] : [shortSide, longSide];
+                const scale = Math.min((pw - 2 * m) / image.width, (ph - 2 * m) / image.height);
+                const w = image.width * scale;
+                const h = image.height * scale;
+                pdfDoc.addPage([pw, ph]).drawImage(image, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
             }
-
-            const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-            const url = URL.createObjectURL(blob);
-
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error('Error converting images to PDF:', error);
-            alert('An error occurred during conversion.');
-            setStatus('IDLE');
-        }
+            tool.setProgress('Saving PDF...');
+            return { blob: await savePdf(pdfDoc), filename: items.length === 1 ? `${items[0].file.name.replace(/\.[^/.]+$/, '')}.pdf` : 'images.pdf' };
+        }, 'An error occurred during conversion.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-        setFiles([]);
-        setStatus('IDLE');
-        setDownloadUrl(null);
+        tool.reset();
+        items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        setItems([]);
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">JPG to PDF</h1>
-                <p className="text-muted mb-8 text-lg">Convert your images to a single PDF document.</p>
-            </div>
+            <ToolHeader title="JPG to PDF" subtitle="Convert JPG, PNG and other images into a single PDF, in the order you choose." />
 
-            {status === 'IDLE' && files.length === 0 && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={true} accept=".jpg,.jpeg,.png" />
-            )}
+            {tool.status === 'IDLE' && items.length === 0 && <FileUploader onFilesSelected={handleFilesSelected} multiple accept={ACCEPT} />}
 
-            {status === 'IDLE' && files.length > 0 && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="grid gap-2 mb-6">
-                        {files.map((file, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-purple-100 p-2 rounded-lg">
-                                        <FileImage className="text-purple-600 w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-medium text-sm truncate max-w-[200px]">{file.name}</h3>
-                                        <p className="text-gray-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            {tool.status === 'IDLE' && items.length > 0 && (
+                <ToolWorkspace>
+                    <ReorderableList
+                        label="Images"
+                        items={items}
+                        getKey={(item) => item.id}
+                        onReorder={setItems}
+                        renderItem={(item, controls) => (
+                            <div className={`${toolStyles.card} ${toolStyles.fileCard}`} style={{ padding: '10px 12px', marginBottom: 8, cursor: 'grab' }}>
+                                <div className={toolStyles.fileMeta}>
+                                    <GripVertical size={18} style={{ color: 'var(--text-light)', flexShrink: 0 }} aria-hidden="true" />
+                                    {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL */}
+                                    <img src={item.previewUrl} alt="" draggable={false} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                                    <div style={{ minWidth: 0 }}>
+                                        <p className={toolStyles.fileName}>{controls.index + 1}. {item.file.name}</p>
+                                        <p className={toolStyles.fileDetail}>{formatBytes(item.file.size)}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => removeFile(index)}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <div style={{ display: 'flex', flexShrink: 0 }}>
+                                    <button type="button" className={toolStyles.iconButton} onClick={controls.moveUp} disabled={controls.isFirst} aria-label={`Move ${item.file.name} up`}>
+                                        <ArrowUp size={18} />
+                                    </button>
+                                    <button type="button" className={toolStyles.iconButton} onClick={controls.moveDown} disabled={controls.isLast} aria-label={`Move ${item.file.name} down`}>
+                                        <ArrowDown size={18} />
+                                    </button>
+                                    <button type="button" className={toolStyles.iconButton} onClick={() => removeItem(item.id)} aria-label={`Remove ${item.file.name}`}>
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    />
 
-                    <div className="flex justify-center flex-col items-center gap-4">
-                        <FileUploader onFilesSelected={handleFilesSelected} multiple={true} accept=".jpg,.jpeg,.png" />
+                    <FileUploader onFilesSelected={handleFilesSelected} multiple accept={ACCEPT} variant="compact" />
 
-                        <button
-                            onClick={convertToPdf}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl mt-4"
-                        >
-                            Convert to PDF <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
+                    <OptionsCard title="Page settings">
+                        <div style={{ display: 'grid', gap: 14 }}>
+                            <ChoiceGroup
+                                label="Page size"
+                                value={pageSize}
+                                onChange={setPageSize}
+                                options={[
+                                    { value: 'a4', title: 'A4' },
+                                    { value: 'letter', title: 'US Letter' },
+                                    { value: 'fit', title: 'Same as image' },
+                                ]}
+                            />
+                            <ChoiceGroup
+                                label="Margin"
+                                value={margin}
+                                onChange={setMargin}
+                                options={[
+                                    { value: 'none', title: 'No margin' },
+                                    { value: 'small', title: 'Small margin' },
+                                    { value: 'large', title: 'Large margin' },
+                                ]}
+                            />
+                        </div>
+                    </OptionsCard>
+
+                    <PrimaryAction onClick={convertToPdf}>
+                        Convert to PDF <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'PROCESSING' && <Processing status="Converting images to PDF..." />}
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting images to PDF...'} />}
 
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename="converted_images.pdf"
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
+                    message="Your images are now a PDF!"
                 />
             )}
         </div>

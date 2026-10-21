@@ -1,202 +1,148 @@
 "use client";
 import { useState } from 'react';
+import { FileSpreadsheet, ArrowRight } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
-import { FileSpreadsheet, ArrowRight, Trash2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, Notice } from '@/components/ToolUI';
+import { baseName } from '@/lib/pdf';
+import { openPdfjsDocument } from '@/lib/pdfjs';
+import { getPositionedText, groupIntoRows, splitIntoCells } from '@/lib/textLayout';
+import { useToolRunner } from '@/lib/useToolRunner';
+
+type SheetMode = 'per_page' | 'single';
+type Cell = string | number;
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** "1,234.50" -> 1234.5, but keeps codes like "007" or "12-34" as text. */
+function toCellValue(text: string): Cell {
+    const t = text.trim();
+    if (/^-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$/.test(t) && !/^0\d/.test(t)) {
+        const n = Number(t.replace(/,/g, ''));
+        if (Number.isFinite(n)) return n;
+    }
+    return t;
+}
+
+/** Finds column positions shared by the whole page so cells of a table line up. */
+function columnAnchors(xs: number[], tolerance = 12): number[] {
+    const sorted = [...xs].sort((a, b) => a - b);
+    const anchors: number[] = [];
+    for (const x of sorted) {
+        if (anchors.length === 0 || x - anchors[anchors.length - 1] > tolerance) anchors.push(x);
+    }
+    return anchors;
+}
 
 export default function PdfToExcelClient() {
     const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'DONE'>('IDLE');
-    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [progress, setProgress] = useState('');
+    const [sheetMode, setSheetMode] = useState<SheetMode>('per_page');
+    const tool = useToolRunner();
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        if (newFiles.length > 0) {
-            setFile(newFiles[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
-
-    const convertToExcel = async () => {
+    const convertToExcel = () => {
         if (!file) return;
-
-        setStatus('PROCESSING');
-
-        try {
-            // Dynamic import to avoid SSR issues
-            const pdfjsLib = await import('pdfjs-dist');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdfDoc = await loadingTask.promise;
-            const totalPages = pdfDoc.numPages;
-
+        tool.run(async () => {
+            const [XLSX, pdfDoc] = await Promise.all([import('xlsx'), openPdfjsDocument(await file.arrayBuffer())]);
             const wb = XLSX.utils.book_new();
+            const combined: Cell[][] = [];
 
-            for (let i = 1; i <= totalPages; i++) {
-                setProgress(`Extracting data from page ${i} of ${totalPages}...`);
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                tool.setProgress(`Extracting data from page ${i} of ${pdfDoc.numPages}...`);
                 const page = await pdfDoc.getPage(i);
-                const textContent = await page.getTextContent();
+                const { items } = await getPositionedText(page);
+                page.cleanup();
 
-                // Group text items by Y position to reconstruct rows
-                const rows: Map<number, { x: number; text: string }[]> = new Map();
-                for (const item of textContent.items) {
-                    if ('str' in item && item.str.trim()) {
-                        const y = Math.round((item as any).transform[5]);
-                        const x = Math.round((item as any).transform[4]);
-                        if (!rows.has(y)) rows.set(y, []);
-                        rows.get(y)!.push({ x, text: item.str });
+                const rows = groupIntoRows(items).map((row) => splitIntoCells(row.items));
+                const anchors = columnAnchors(rows.flatMap((cells) => cells.map((c) => c.x)));
+                const sheet: Cell[][] = rows.map((cells) => {
+                    const out: Cell[] = [];
+                    for (const cell of cells) {
+                        // Place the cell in the right-most column that starts at or before it.
+                        let col = 0;
+                        while (col + 1 < anchors.length && anchors[col + 1] <= cell.x + 6) col++;
+                        while (out.length < col) out.push('');
+                        out[col] = out[col] !== undefined && out[col] !== '' ? `${out[col]} ${cell.text}` : toCellValue(cell.text);
                     }
-                }
+                    return out;
+                });
 
-                // Sort rows by Y position (descending) and items within each row by X
-                const sortedYs = Array.from(rows.keys()).sort((a, b) => b - a);
-
-                const sheetData: string[][] = [];
-
-                for (const y of sortedYs) {
-                    const rowItems = rows.get(y)!.sort((a, b) => a.x - b.x);
-
-                    // Try to detect columns by X-position clustering
-                    // Simple approach: split items into cells based on gaps
-                    const cells: string[] = [];
-                    let currentCell = '';
-                    let lastX = -Infinity;
-
-                    for (const item of rowItems) {
-                        // If gap is large enough, treat as a new cell
-                        if (lastX !== -Infinity && (item.x - lastX) > 30) {
-                            cells.push(currentCell.trim());
-                            currentCell = item.text;
-                        } else {
-                            currentCell += (currentCell ? ' ' : '') + item.text;
-                        }
-                        lastX = item.x + (item.text.length * 5); // Approximate width
-                    }
-                    if (currentCell.trim()) {
-                        cells.push(currentCell.trim());
-                    }
-
-                    if (cells.length > 0) {
-                        sheetData.push(cells);
-                    }
-                }
-
-                // Create worksheet from data
-                if (sheetData.length > 0) {
-                    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-
-                    // Auto-size columns
-                    const colWidths = sheetData[0].map((_, colIdx) => {
-                        let maxLen = 10;
-                        for (const row of sheetData) {
-                            if (row[colIdx] && row[colIdx].length > maxLen) {
-                                maxLen = row[colIdx].length;
-                            }
-                        }
-                        return { wch: Math.min(maxLen + 2, 50) };
-                    });
-                    ws['!cols'] = colWidths;
-
-                    const sheetName = totalPages === 1 ? 'Sheet1' : `Page ${i}`;
-                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                if (sheetMode === 'single') {
+                    if (combined.length) combined.push([]);
+                    combined.push(...sheet);
+                } else if (sheet.length) {
+                    XLSX.utils.book_append_sheet(wb, makeSheet(XLSX, sheet), `Page ${i}`);
                 }
             }
+            await pdfDoc.destroy();
 
-            // If no data was extracted, add an empty sheet with a note
+            if (sheetMode === 'single' && combined.length) XLSX.utils.book_append_sheet(wb, makeSheet(XLSX, combined), 'Data');
             if (wb.SheetNames.length === 0) {
-                const ws = XLSX.utils.aoa_to_sheet([
-                    ["No extractable data found in this PDF."],
-                    ["The PDF may contain scanned images rather than text."]
-                ]);
-                XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+                XLSX.utils.book_append_sheet(
+                    wb,
+                    XLSX.utils.aoa_to_sheet([['No extractable text was found in this PDF.'], ['It may be a scanned document (images only).']]),
+                    'Sheet1'
+                );
             }
 
-            setProgress('Generating Excel file...');
-
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-            // Revoke any previous URL
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
-            setStatus('DONE');
-        } catch (error) {
-            console.error("Error generating Excel:", error);
-            alert("Error generating file. Please try again.");
-            setStatus('IDLE');
-        }
+            tool.setProgress('Generating Excel file...');
+            const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+            return { blob: new Blob([data], { type: XLSX_MIME }), filename: `${baseName(file.name)}.xlsx` };
+        }, 'Error generating the spreadsheet. Please try again.');
     };
 
     const reset = () => {
-        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        tool.reset();
         setFile(null);
-        setStatus('IDLE');
-        setDownloadUrl(null);
-        setProgress('');
     };
 
     return (
         <div className="container">
-            <div className="text-center mt-4 mb-4">
-                <h1 className="text-4xl font-bold mb-4">PDF to Excel</h1>
-                <p className="text-muted mb-8 text-lg">Extract data from PDF files into editable Excel spreadsheets.</p>
-            </div>
+            <ToolHeader title="PDF to Excel" subtitle="Extract tables and data from PDF files into editable Excel spreadsheets." />
 
-            {status === 'IDLE' && !file && (
-                <FileUploader onFilesSelected={handleFilesSelected} multiple={false} accept=".pdf" />
+            {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
+
+            {tool.status === 'IDLE' && file && (
+                <ToolWorkspace>
+                    <SelectedFile file={file} onRemove={reset} icon={FileSpreadsheet} />
+                    <OptionsCard title="Output">
+                        <ChoiceGroup
+                            label="Worksheets"
+                            value={sheetMode}
+                            onChange={setSheetMode}
+                            options={[
+                                { value: 'per_page', title: 'One sheet per page' },
+                                { value: 'single', title: 'All pages in one sheet' },
+                            ]}
+                        />
+                    </OptionsCard>
+                    <Notice>Works best with PDFs created digitally (not scans). Numbers are stored as real numbers so you can calculate with them.</Notice>
+                    <PrimaryAction onClick={convertToExcel}>
+                        Convert to Excel <ArrowRight size={22} />
+                    </PrimaryAction>
+                </ToolWorkspace>
             )}
 
-            {status === 'IDLE' && file && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-green-100 p-3 rounded-lg">
-                                <FileSpreadsheet className="text-green-600 w-8 h-8" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-lg">{file.name}</h3>
-                                <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={removeFile}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-500"
-                            title="Remove file"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
+            {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Extracting tables to Excel...'} />}
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={convertToExcel}
-                            className="btn btn-primary btn-lg flex items-center gap-2 px-8 py-4 text-xl"
-                        >
-                            Convert to Excel <ArrowRight size={24} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {status === 'PROCESSING' && <Processing status={progress || "Extracting tables to Excel..."} />}
-
-            {status === 'DONE' && downloadUrl && (
+            {tool.status === 'DONE' && tool.result && (
                 <DownloadResult
-                    downloadUrl={downloadUrl}
-                    downloadFilename={`${file?.name ? file.name.replace(/\.[^/.]+$/, '') : 'document'}.xlsx`}
+                    downloadUrl={tool.result.url}
+                    downloadFilename={tool.result.filename}
+                    fileSize={tool.result.size}
                     onReset={reset}
                     message="Your Excel spreadsheet is ready!"
                 />
             )}
         </div>
     );
+}
+
+function makeSheet(XLSX: typeof import('xlsx'), rows: Cell[][]) {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const columns = Math.max(0, ...rows.map((r) => r.length));
+    ws['!cols'] = Array.from({ length: columns }, (_, c) => ({
+        wch: Math.min(50, Math.max(8, ...rows.map((r) => String(r[c] ?? '').length + 2))),
+    }));
+    return ws;
 }

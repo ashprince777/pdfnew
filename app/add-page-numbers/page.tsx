@@ -5,7 +5,7 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Add Page Numbers to PDF Online Free | MyOnlinePDF',
+    title: 'Add Page Numbers to PDF Online Free',
     description: 'Insert page numbers into PDF documents easily. Choose numbering position, typography, and format. Free and 100% private in browser.',
     alternates: {
         canonical: '/add-page-numbers',
