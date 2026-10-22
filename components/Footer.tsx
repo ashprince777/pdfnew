@@ -82,7 +82,7 @@ export default function Footer() {
                         <ShieldCheck size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
                         Every PDF tool runs in your browser. Your files are never uploaded.
                     </p>
-                    <p>&copy; {new Date().getFullYear()} {SITE.name}, a {SITE.legalName} brand. All rights reserved.</p>
+                    <p>{`© ${new Date().getFullYear()} ${SITE.name}, a ${SITE.legalName} brand. All rights reserved.`}</p>
                 </div>
             </div>
         </footer>
