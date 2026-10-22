@@ -74,6 +74,7 @@ export function LoginForm() {
     const [password, setPassword] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(params.get('error') === 'link' ? 'That link is invalid or has expired. Please try again.' : null);
+    const confirmed = params.get('confirmed') === '1';
 
     if (!authEnabled) return <NotConfigured />;
 
@@ -96,6 +97,11 @@ export function LoginForm() {
             <div className={styles.card}>
                 <h1 className={styles.title}>Log in</h1>
                 <p className={styles.subtitle}>Welcome back to PDFAdore</p>
+                {confirmed && (
+                    <p className={styles.success} role="status" style={{ marginBottom: 16 }}>
+                        Your email is confirmed. Log in to continue.
+                    </p>
+                )}
                 <GoogleButton next={next} />
                 <div className={styles.divider}>or</div>
                 <form className={styles.form} onSubmit={submit}>
@@ -213,7 +219,12 @@ export function ForgotPasswordForm() {
     const [email, setEmail] = useState('');
     const [busy, setBusy] = useState(false);
     const [sent, setSent] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const params = useSearchParams();
+    const [error, setError] = useState<string | null>(
+        params.get('error') === 'browser'
+            ? 'Please open the reset link in the same browser where you asked for it, or request a new link below.'
+            : null
+    );
 
     if (!authEnabled) return <NotConfigured />;
 

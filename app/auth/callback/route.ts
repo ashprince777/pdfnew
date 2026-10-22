@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
     if (supabase && code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) return NextResponse.redirect(`${origin}${next}`);
+        // The link was valid (Supabase already confirmed the email or approved the reset), but it was
+        // opened in a different browser from the one that asked for it, so no session can be created here.
+        if (next === '/reset-password') return NextResponse.redirect(`${origin}/forgot-password?error=browser`);
+        return NextResponse.redirect(`${origin}/login?confirmed=1${next !== '/account' ? `&next=${encodeURIComponent(next)}` : ''}`);
     }
+    // No code: the link was expired, already used or invalid.
     return NextResponse.redirect(`${origin}/login?error=link`);
 }
