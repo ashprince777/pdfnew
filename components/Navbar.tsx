@@ -2,15 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, Search, FileStack, Scissors, Minimize2 } from 'lucide-react';
+import { ALL_TOOLS } from '@/lib/tools';
 import ThemeToggle from './ThemeToggle';
 import CommandPalette from './CommandPalette';
 import MobileDrawer from './MobileDrawer';
+import AccountButton from './AccountButton';
+import { usePlan } from './PlanProvider';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const { billingEnabled } = usePlan();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -68,11 +72,18 @@ export default function Navbar() {
                             <span>Compress</span>
                         </Link>
 
+                        {billingEnabled && (
+                            <Link href="/pricing" className={styles.navLink}>
+                                <span>Pricing</span>
+                            </Link>
+                        )}
+
                         <Link href="/all-tools" className={styles.btnAll}>
-                            All 22+ Tools
+                            All {ALL_TOOLS.length} Tools
                         </Link>
 
                         <ThemeToggle />
+                        <AccountButton />
                     </div>
 
                     {/* Mobile Controls */}
@@ -86,6 +97,7 @@ export default function Navbar() {
                         </button>
 
                         <ThemeToggle />
+                        <AccountButton compact />
 
                         <button
                             className={styles.mobileBtn}

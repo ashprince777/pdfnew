@@ -1,14 +1,14 @@
 "use client";
 import { useState } from 'react';
-import { degrees } from '@cantoo/pdf-lib';
 import { Trash2, ArrowRight, ArrowLeft, FileText, RotateCw, RotateCcw, Undo2 } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import ReorderableList from '@/components/ReorderableList';
 import { ToolHeader, ToolWorkspace, SelectedFile, PrimaryAction, toolStyles } from '@/components/ToolUI';
-import { baseName, loadPdf, PdfToolError, savePdf, setPageOrder } from '@/lib/pdf';
+import { baseName, loadPdf, PdfToolError, pdfBytesToBlob } from '@/lib/pdf';
 import { usePdfThumbnails } from '@/lib/usePdfThumbnails';
+import { runPdfOp } from '@/lib/pdfWorkerClient';
 import { useToolRunner } from '@/lib/useToolRunner';
 import grid from '@/components/PageGrid.module.css';
 
@@ -53,15 +53,9 @@ export default function OrganizePdfClient() {
     const saveChanges = () => {
         if (!file || pages.length === 0) return;
         tool.run(async () => {
-            const pdfDoc = await loadPdf(file);
-            const originals = pdfDoc.getPages();
-            const ordered = pages.map((item) => {
-                const page = originals[item.original - 1];
-                if (item.rotation) page.setRotation(degrees((page.getRotation().angle + item.rotation) % 360));
-                return page;
-            });
-            setPageOrder(pdfDoc, ordered);
-            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_organized.pdf` };
+            const order = pages.map(({ original, rotation }) => ({ original, rotation }));
+            const bytes = await runPdfOp('arrangePages', [await file.arrayBuffer(), order]);
+            return { blob: pdfBytesToBlob(bytes), filename: `${baseName(file.name)}_organized.pdf` };
         }, 'Failed to save organized PDF. Please try again.');
     };
 

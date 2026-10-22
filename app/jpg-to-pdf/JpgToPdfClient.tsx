@@ -184,7 +184,7 @@ export default function JpgToPdfClient() {
                         )}
                     />
 
-                    <FileUploader onFilesSelected={handleFilesSelected} multiple accept={ACCEPT} variant="compact" />
+                    <FileUploader onFilesSelected={handleFilesSelected} multiple accept={ACCEPT} variant="compact" currentCount={items.length} />
 
                     <OptionsCard title="Page settings">
                         <div style={{ display: 'grid', gap: 14 }}>

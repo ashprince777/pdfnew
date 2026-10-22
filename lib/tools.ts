@@ -20,6 +20,12 @@ import {
     FileEdit,
     ArrowLeftRight,
     Archive,
+    Sparkles,
+    MessagesSquare,
+    Languages,
+    EyeOff,
+    FormInput,
+    ScanLine,
     LucideIcon
 } from 'lucide-react';
 
@@ -30,7 +36,8 @@ export type ToolCategory =
     | 'to_pdf'
     | 'from_pdf'
     | 'edit'
-    | 'security';
+    | 'security'
+    | 'ai';
 
 export interface ToolItem {
     title: string;
@@ -49,6 +56,7 @@ export const CATEGORIES: { id: ToolCategory; label: string; color: string }[] = 
     { id: 'from_pdf', label: 'Convert from PDF', color: 'var(--cat-from-pdf)' },
     { id: 'edit', label: 'Edit PDF', color: 'var(--cat-edit)' },
     { id: 'security', label: 'PDF Security', color: 'var(--cat-security)' },
+    { id: 'ai', label: 'AI PDF', color: 'var(--cat-ai)' },
 ];
 
 export const POPULAR_TOOL_HREFS: string[] = [
@@ -153,6 +161,14 @@ export const ALL_TOOLS: ToolItem[] = [
         color: 'var(--cat-to-pdf)',
         category: 'to_pdf',
     },
+    {
+        title: 'Scan to PDF',
+        description: 'Scan paper documents with your phone or laptop camera.',
+        href: '/scan-to-pdf',
+        icon: ScanLine,
+        color: 'var(--cat-to-pdf)',
+        category: 'to_pdf',
+    },
 
     // Convert from PDF (Cyan)
     {
@@ -237,6 +253,14 @@ export const ALL_TOOLS: ToolItem[] = [
         color: 'var(--cat-edit)',
         category: 'edit',
     },
+    {
+        title: 'Fill PDF Forms',
+        description: 'Type into fillable forms, tick boxes and optionally flatten.',
+        href: '/fill-pdf-form',
+        icon: FormInput,
+        color: 'var(--cat-edit)',
+        category: 'edit',
+    },
 
     // PDF Security (Ruby Red)
     {
@@ -264,11 +288,45 @@ export const ALL_TOOLS: ToolItem[] = [
         category: 'security',
     },
     {
+        title: 'Redact PDF',
+        description: 'Permanently black out names, numbers and private details.',
+        href: '/redact-pdf',
+        icon: EyeOff,
+        color: 'var(--cat-security)',
+        category: 'security',
+    },
+    {
         title: 'Compare PDF',
         description: 'Review side-by-side visual and textual document revisions.',
         href: '/compare-pdf',
         icon: ArrowLeftRight,
         color: 'var(--cat-security)',
         category: 'security',
+    },
+
+    // AI PDF (Amber)
+    {
+        title: 'Summarize PDF',
+        description: 'AI summary with key points, dates and action items.',
+        href: '/summarize-pdf',
+        icon: Sparkles,
+        color: 'var(--cat-ai)',
+        category: 'ai',
+    },
+    {
+        title: 'Chat with PDF',
+        description: 'Ask questions about your document and get cited answers.',
+        href: '/chat-with-pdf',
+        icon: MessagesSquare,
+        color: 'var(--cat-ai)',
+        category: 'ai',
+    },
+    {
+        title: 'Translate PDF',
+        description: 'Translate PDF text into Hindi, Tamil, English and more.',
+        href: '/translate-pdf',
+        icon: Languages,
+        color: 'var(--cat-ai)',
+        category: 'ai',
     },
 ];

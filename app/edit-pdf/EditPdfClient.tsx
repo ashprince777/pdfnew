@@ -13,6 +13,7 @@ import { openPdfjsDocument } from '@/lib/pdfjs';
 import { analyzePage, ocrPage, rgbToHex, sampleColors, type PageAnalysis, type TextSegment } from '@/lib/pageAnalysis';
 import { drawnAspect, findPageImages, replacePageImage } from '@/lib/pageContent';
 import { useToolRunner } from '@/lib/useToolRunner';
+import { PremiumBadge, UpgradePrompt, usePremiumFeature } from '@/components/PremiumGate';
 import styles from './EditPdf.module.css';
 
 type Tool = 'text' | 'image' | 'whiteout' | 'highlight';
@@ -155,6 +156,8 @@ export default function EditPdfClient() {
     const gesture = useRef<{ type: 'move'; id: number; dx: number; dy: number } | { type: 'draw'; id: number; x0: number; y0: number } | null>(null);
     const tool = useToolRunner();
     const { notify } = tool;
+    const canOcr = usePremiumFeature('ocr');
+    const canReplaceImages = usePremiumFeature('replace-image');
 
     // Track the rendered page width so font sizes in the preview match the PDF.
     useEffect(() => {
@@ -551,6 +554,7 @@ export default function EditPdfClient() {
                                 className={currentTool === value ? styles.toolActive : styles.toolButton}
                             >
                                 <Icon size={18} /> {label}
+                                {value === 'image' && !canReplaceImages && <PremiumBadge />}
                             </button>
                         ))}
                         <button type="button" className={styles.toolButton} onClick={undo} disabled={changeCount === 0}>
@@ -584,14 +588,17 @@ export default function EditPdfClient() {
                                 <span className={styles.hint} role="status">
                                     Recognising text... {Math.round(ocrProgress * 100)}%
                                 </span>
-                            ) : (
+                            ) : canOcr ? (
                                 <button type="button" className={styles.toolButton} onClick={runOcr}>
                                     <ScanText size={18} /> {pageSegments.length === 0 ? 'Detect text with OCR' : 'Text missing? Detect with OCR'}
                                 </button>
+                            ) : (
+                                pageSegments.length === 0 && <UpgradePrompt feature="ocr" />
                             )}
                         </div>
                     )}
-                    {currentTool === 'image' && imagesByPage[currentPage]?.length === 0 && <Notice>No images were found on this page.</Notice>}
+                    {currentTool === 'image' && !canReplaceImages && <UpgradePrompt feature="replace-image" />}
+                    {currentTool === 'image' && canReplaceImages && imagesByPage[currentPage]?.length === 0 && <Notice>No images were found on this page.</Notice>}
 
                     <div className={styles.pageArea}>
                         <PdfPagePreview
@@ -626,6 +633,7 @@ export default function EditPdfClient() {
                                 ))}
 
                             {currentTool === 'image' &&
+                                canReplaceImages &&
                                 (imagesByPage[currentPage] ?? []).map((box, i) => (
                                     <div
                                         key={`img-${i}`}

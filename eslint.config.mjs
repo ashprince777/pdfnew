@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".next-test-*/**",
     // Vendored / generated browser bundles
     "public/**",
     // Ad-hoc debugging scripts in the repo root

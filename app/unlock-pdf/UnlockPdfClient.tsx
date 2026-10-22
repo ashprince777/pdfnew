@@ -5,7 +5,8 @@ import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
-import { baseName, decryptPdf, isPdfEncrypted, PdfToolError, savePdf } from '@/lib/pdf';
+import { baseName, pdfBytesToBlob } from '@/lib/pdf';
+import { runPdfOp } from '@/lib/pdfWorkerClient';
 import { useToolRunner } from '@/lib/useToolRunner';
 
 export default function UnlockPdfClient() {
@@ -16,12 +17,9 @@ export default function UnlockPdfClient() {
     const unlockPdf = () => {
         if (!file) return;
         tool.run(async () => {
-            if (!(await isPdfEncrypted(file))) {
-                throw new PdfToolError('This PDF is not password-protected or restricted, so there is nothing to unlock.', 'NOT_ENCRYPTED');
-            }
             // An empty password unlocks files that only carry permission restrictions.
-            const pdfDoc = await decryptPdf(file, password);
-            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_unlocked.pdf` };
+            const bytes = await runPdfOp('unlockPdf', [await file.arrayBuffer(), password]);
+            return { blob: pdfBytesToBlob(bytes), filename: `${baseName(file.name)}_unlocked.pdf` };
         }, 'Could not unlock this file.');
     };
 

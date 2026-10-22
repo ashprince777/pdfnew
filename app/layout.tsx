@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import CookieConsent from '@/components/CookieConsent';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import { ToastProvider } from '@/components/ToastProvider';
+import { PlanProvider } from '@/components/PlanProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -65,13 +66,15 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ToastProvider>
-          <Navbar />
-          <main style={{ minHeight: 'calc(100vh - 200px)' }}>
-            {children}
-          </main>
-          <Footer />
-          <CookieConsent />
-          <GoogleAnalytics />
+          <PlanProvider>
+            <Navbar />
+            <main style={{ minHeight: 'calc(100vh - 200px)' }}>
+              {children}
+            </main>
+            <Footer />
+            <CookieConsent />
+            <GoogleAnalytics />
+          </PlanProvider>
         </ToastProvider>
       </body>
     </html>

@@ -5,7 +5,8 @@ import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
-import { baseName, loadPdf, PdfToolError, savePdf } from '@/lib/pdf';
+import { baseName, pdfBytesToBlob } from '@/lib/pdf';
+import { runPdfOp } from '@/lib/pdfWorkerClient';
 import { useToolRunner } from '@/lib/useToolRunner';
 
 const MIN_PASSWORD_LENGTH = 4;
@@ -32,23 +33,18 @@ export default function ProtectClient() {
     const protectPdf = () => {
         if (!file || !canSubmit) return;
         tool.run(async () => {
-            const pdfDoc = await loadPdf(file);
-            if (pdfDoc.getPageCount() === 0) throw new PdfToolError('This PDF has no pages.');
-            pdfDoc.encrypt({
-                userPassword: password,
-                // A separate random owner password makes the restrictions below enforceable.
-                ownerPassword: randomOwnerPassword(),
-                permissions: {
-                    printing: allowPrinting ? 'highResolution' : false,
-                    copying: allowCopying,
-                    modifying: allowEditing,
-                    annotating: allowEditing,
-                    fillingForms: true,
-                    contentAccessibility: true,
-                    documentAssembly: allowEditing,
+            const bytes = await runPdfOp('protectPdf', [
+                await file.arrayBuffer(),
+                {
+                    userPassword: password,
+                    // A separate random owner password makes the restrictions enforceable.
+                    ownerPassword: randomOwnerPassword(),
+                    allowPrinting,
+                    allowCopying,
+                    allowEditing,
                 },
-            });
-            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_protected.pdf` };
+            ]);
+            return { blob: pdfBytesToBlob(bytes), filename: `${baseName(file.name)}_protected.pdf` };
         }, 'Could not protect this PDF. Please try another file.');
     };
 

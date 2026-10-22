@@ -34,6 +34,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
         title: 'Company',
         links: [
             { href: '/all-tools', label: 'All Tools' },
+            { href: '/pricing', label: 'Pricing' },
             { href: '/about', label: 'About Us' },
             { href: '/faq', label: 'FAQ' },
             { href: '/contact', label: 'Contact Us' },
@@ -44,6 +45,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
         links: [
             { href: '/privacy', label: 'Privacy Policy' },
             { href: '/terms', label: 'Terms & Conditions' },
+            { href: '/refund-policy', label: 'Refund Policy' },
             { href: '/deletion-policy', label: 'File Security' },
         ],
     },
@@ -69,7 +71,7 @@ export default function Footer() {
                 <div className={styles.bottom}>
                     <p style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                         <ShieldCheck size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
-                        Every tool runs in your browser. Your files are never uploaded.
+                        Every PDF tool runs in your browser. Your files are never uploaded.
                     </p>
                     <p>&copy; {new Date().getFullYear()} MyOnlinePDF. All rights reserved.</p>
                 </div>

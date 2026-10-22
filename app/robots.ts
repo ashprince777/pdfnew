@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
             userAgent: '*',
             allow: '/',
-            disallow: ['/api/', '/_next/'],
+            disallow: ['/api/', '/_next/', '/account', '/auth/', '/reset-password'],
         },
         sitemap: 'https://myonlinepdf.com/sitemap.xml',
     };

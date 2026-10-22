@@ -44,3 +44,9 @@ next-env.d.ts
 /public/pdf.worker.min.mjs
 /public/pdfjs/
 /public/tesseract/
+!.env.example
+
+# end-to-end test inputs/outputs
+/tests/.fixtures/
+/tests/.output/
+/.next-test-*/

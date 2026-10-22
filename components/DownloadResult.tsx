@@ -1,7 +1,10 @@
 "use client";
-import React from 'react';
-import { Download, CheckCircle, ArrowLeft, FileCheck, Eye, FileText, FileSpreadsheet, Presentation, Archive, FileImage } from 'lucide-react';
+import React, { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Download, CheckCircle, ArrowLeft, FileCheck, Eye, FileText, FileSpreadsheet, Presentation, Archive, FileImage, ArrowRight } from 'lucide-react';
 import { formatBytes } from '@/lib/pdf';
+import { setHandoff } from '@/lib/handoff';
+import { ALL_TOOLS } from '@/lib/tools';
 import styles from './DownloadResult.module.css';
 
 interface DownloadResultProps {
@@ -22,6 +25,10 @@ const FILE_KINDS = {
     image: { label: 'Download Image', icon: FileImage, tint: 'var(--cat-edit)' },
     other: { label: 'Download File', icon: FileCheck, tint: 'var(--text-light)' },
 } as const;
+
+/** Tools offered after a PDF result, in order of how often they follow each other. */
+const NEXT_TOOLS = ['/compress-pdf', '/protect-pdf', '/redact-pdf', '/sign-pdf', '/merge-pdf', '/watermark-pdf', '/add-page-numbers', '/edit-pdf', '/split-pdf', '/rotate-pdf', '/pdf-to-word'];
+const MAX_NEXT_TOOLS = 6;
 
 function kindForExtension(ext: string): keyof typeof FILE_KINDS {
     if (ext === 'pdf') return 'pdf';
@@ -45,8 +52,24 @@ export default function DownloadResult({
     const kind = FILE_KINDS[kindForExtension(ext)];
     const KindIcon = kind.icon;
 
+    const pathname = usePathname();
+    const router = useRouter();
+    const [handingOff, setHandingOff] = useState<string | null>(null);
+    const nextTools = NEXT_TOOLS.filter((href) => href !== pathname)
+        .slice(0, MAX_NEXT_TOOLS)
+        .map((href) => ALL_TOOLS.find((t) => t.href === href))
+        .filter((t): t is (typeof ALL_TOOLS)[number] => Boolean(t));
+
     const handlePreview = () => {
         window.open(downloadUrl, '_blank', 'noopener');
+    };
+
+    /** Passes this result to another tool in memory (no download, no upload). */
+    const continueWith = async (href: string) => {
+        setHandingOff(href);
+        const blob = await (await fetch(downloadUrl)).blob();
+        setHandoff(new File([blob], cleanFilename, { type: blob.type || 'application/pdf' }), pathname);
+        router.push(href);
     };
 
     return (
@@ -98,6 +121,24 @@ export default function DownloadResult({
             <p className={styles.note}>
                 Your file was created in your browser and never left your device.
             </p>
+
+            {ext === 'pdf' && nextTools.length > 0 && (
+                <div className={styles.continue}>
+                    <p className={styles.continueTitle}>Continue with this file</p>
+                    <div className={styles.continueGrid}>
+                        {nextTools.map((tool) => {
+                            const Icon = tool.icon;
+                            return (
+                                <button key={tool.href} type="button" className={styles.continueBtn} onClick={() => continueWith(tool.href)} disabled={handingOff !== null}>
+                                    <Icon size={16} style={{ color: tool.color }} aria-hidden="true" />
+                                    <span>{handingOff === tool.href ? 'Opening...' : tool.title}</span>
+                                    <ArrowRight size={14} aria-hidden="true" className={styles.continueArrow} />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className={styles.actions}>
                 <button type="button" onClick={onReset} className={styles.linkBtn}>

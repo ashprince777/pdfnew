@@ -7,6 +7,8 @@ interface ToolSeoContentProps {
     actionDescription: string; // e.g., "combine multiple PDFs", "extract pages"
     benefits: string[];
     faqItems: { question: string; answer: string }[];
+    /** AI tools send document text to the AI model and need an account, so the privacy and pricing copy differs. */
+    ai?: boolean;
 }
 
 export default function ToolSeoContent({
@@ -14,7 +16,8 @@ export default function ToolSeoContent({
     actionName,
     actionDescription,
     benefits,
-    faqItems
+    faqItems,
+    ai = false,
 }: ToolSeoContentProps) {
     return (
         <div className="prose max-w-4xl mx-auto py-12 px-4 md:px-0">
@@ -28,7 +31,11 @@ export default function ToolSeoContent({
             <div className="grid md:grid-cols-2 gap-6 mb-10">
                 <div className="bg-gray-50 p-6 rounded-lg">
                     <h3 className="text-xl font-bold mb-2">Secure & Private</h3>
-                    <p>We process your files <strong>locally in your browser</strong> (for supported tools). Your data never leaves your device, ensuring maximum privacy.</p>
+                    {ai ? (
+                        <p>Your PDF file <strong>stays on your device</strong>. Only the text of the pages you choose is sent to the AI model to write the answer, and we never store it.</p>
+                    ) : (
+                        <p>We process your files <strong>locally in your browser</strong> (for supported tools). Your data never leaves your device, ensuring maximum privacy.</p>
+                    )}
                 </div>
                 <div className="bg-gray-50 p-6 rounded-lg">
                     <h3 className="text-xl font-bold mb-2">Fast & Easy</h3>
@@ -39,8 +46,12 @@ export default function ToolSeoContent({
                     <p>Works in the cloud (or browser). No software to download, no app to install. Compatible with Windows, Mac, Linux, and Mobile.</p>
                 </div>
                 <div className="bg-gray-50 p-6 rounded-lg">
-                    <h3 className="text-xl font-bold mb-2">Completely Free</h3>
-                    <p>Enjoy full access to our {toolName} tool without hidden fees, watermarks, or sign-up requirements.</p>
+                    <h3 className="text-xl font-bold mb-2">{ai ? 'Free to Try' : 'Completely Free'}</h3>
+                    {ai ? (
+                        <p>Every free account includes 3 AI credits a month. Premium includes 200 AI credits a month, plus all Premium PDF features.</p>
+                    ) : (
+                        <p>Enjoy full access to our {toolName} tool without hidden fees, watermarks, or sign-up requirements.</p>
+                    )}
                 </div>
             </div>
 

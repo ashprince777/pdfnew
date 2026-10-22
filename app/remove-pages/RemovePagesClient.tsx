@@ -5,8 +5,9 @@ import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, PrimaryAction, toolStyles } from '@/components/ToolUI';
-import { baseName, loadPdf, parsePageRanges, PdfToolError, savePdf, setPageOrder } from '@/lib/pdf';
+import { baseName, loadPdf, parsePageRanges, PdfToolError, pdfBytesToBlob } from '@/lib/pdf';
 import { usePdfThumbnails } from '@/lib/usePdfThumbnails';
+import { runPdfOp } from '@/lib/pdfWorkerClient';
 import { useToolRunner } from '@/lib/useToolRunner';
 import grid from '@/components/PageGrid.module.css';
 
@@ -56,9 +57,9 @@ export default function RemovePagesClient() {
         if (removedCount === 0) return tool.notify('Please select at least one page to remove.');
         if (remainingCount <= 0) return tool.notify('You cannot remove all pages. At least 1 page must remain.');
         tool.run(async () => {
-            const pdfDoc = await loadPdf(file);
-            setPageOrder(pdfDoc, pdfDoc.getPages().filter((_, i) => !removed.has(i + 1)));
-            return { blob: await savePdf(pdfDoc), filename: `${baseName(file.name)}_cleaned.pdf` };
+            const kept = Array.from({ length: pageCount ?? 0 }, (_, i) => i + 1).filter((n) => !removed.has(n));
+            const bytes = await runPdfOp('arrangePages', [await file.arrayBuffer(), kept.map((original) => ({ original, rotation: 0 }))]);
+            return { blob: pdfBytesToBlob(bytes), filename: `${baseName(file.name)}_cleaned.pdf` };
         }, 'Failed to remove pages. Please try again.');
     };
 

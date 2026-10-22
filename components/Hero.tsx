@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { ArrowRight } from 'lucide-react';
+import { ALL_TOOLS } from '@/lib/tools';
 import styles from './Hero.module.css';
 
 export default function Hero() {
@@ -18,7 +19,7 @@ export default function Hero() {
 
                 <div className={styles.cta}>
                     <Link href="/all-tools" className="btn btn-primary btn-lg" style={{ gap: '8px', minHeight: 'var(--touch-target-min)' }}>
-                        <span>Explore All 22+ Tools</span>
+                        <span>Explore All {ALL_TOOLS.length} Tools</span>
                         <ArrowRight size={18} />
                     </Link>
                 </div>

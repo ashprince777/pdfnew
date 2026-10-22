@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ALL_TOOLS, CATEGORIES, ToolCategory } from '@/lib/tools';
-import { X, Search, ChevronRight, Sparkles } from 'lucide-react';
+import { X, Search, ChevronRight, Sparkles, Crown, UserRound } from 'lucide-react';
+import { usePlan } from '@/components/PlanProvider';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface MobileDrawerProps {
@@ -12,6 +13,7 @@ interface MobileDrawerProps {
 }
 
 export default function MobileDrawer({ isOpen, onClose, onOpenSearch }: MobileDrawerProps) {
+    const { authEnabled, billingEnabled, user } = usePlan();
     const [expandedCategory, setExpandedCategory] = useState<ToolCategory | 'all'>('organize');
 
     useEffect(() => {
@@ -124,7 +126,7 @@ export default function MobileDrawer({ isOpen, onClose, onOpenSearch }: MobileDr
                         }}
                     >
                         <Search size={16} style={{ color: 'var(--primary)' }} />
-                        <span>Search all 22+ tools...</span>
+                        <span>Search all {ALL_TOOLS.length} tools...</span>
                     </button>
                 </div>
 
@@ -152,6 +154,20 @@ export default function MobileDrawer({ isOpen, onClose, onOpenSearch }: MobileDr
                         </span>
                         <ChevronRight size={16} />
                     </Link>
+                    {(billingEnabled || authEnabled) && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            {billingEnabled && (
+                                <Link href="/pricing" onClick={onClose} className="btn btn-outline" style={{ flex: 1, gap: 6, padding: '8px 12px', fontSize: 'var(--text-sm)' }}>
+                                    <Crown size={16} /> Pricing
+                                </Link>
+                            )}
+                            {authEnabled && (
+                                <Link href={user ? '/account' : '/login'} onClick={onClose} className="btn btn-outline" style={{ flex: 1, gap: 6, padding: '8px 12px', fontSize: 'var(--text-sm)' }}>
+                                    <UserRound size={16} /> {user ? 'Account' : 'Log in'}
+                                </Link>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Categories Accordion List */}

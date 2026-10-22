@@ -21,6 +21,7 @@
   --cat-from-pdf: #0891b2;         /* Cyan */
   --cat-edit: #8b5cf6;             /* Purple */
   --cat-security: #dc2626;         /* Ruby Red */
+  --cat-ai: #d97706;               /* Amber */
 
   /* --- Neutrals & Surfaces (Light Mode) --- */
   --bg-color: #f8fafc;             /* Slate 50 canvas */
@@ -85,6 +86,7 @@
   --cat-from-pdf: #22d3ee;
   --cat-edit: #a78bfa;
   --cat-security: #f87171;
+  --cat-ai: #fbbf24;
 
   /* --- Neutrals & Surfaces (Dark Slate) --- */
   --bg-color: #0b0f19;             /* Midnight slate canvas */

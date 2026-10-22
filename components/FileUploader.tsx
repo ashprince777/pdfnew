@@ -1,15 +1,23 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Upload, AlertCircle, RefreshCw, Plus, Crown } from 'lucide-react';
+import { usePlan, useToolLimits } from '@/components/PlanProvider';
+import { getToolLimits } from '@/lib/plans';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { addRecentToolHref } from '@/lib/storage';
+import { takeHandoff } from '@/lib/handoff';
 import styles from './FileUploader.module.css';
 
 interface FileUploaderProps {
     onFilesSelected: (files: File[]) => void;
     accept?: string;
     multiple?: boolean;
+    /** Overrides the plan's size limit for this tool. */
     maxFileSizeMB?: number;
+    /** Files already selected for this task (counts towards the plan's per-task limit). */
+    currentCount?: number;
     /** What the user is choosing, e.g. "Word Document". Derived from `accept` when omitted. */
     toolName?: string;
     /** "compact" renders a single "Add more files" button for adding to an existing selection. */
@@ -32,18 +40,43 @@ export default function FileUploader({
     onFilesSelected,
     accept = '.pdf',
     multiple = false,
-    maxFileSizeMB = 100,
+    maxFileSizeMB: maxFileSizeOverride,
+    currentCount = 0,
     toolName,
     variant = 'default',
 }: FileUploaderProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    /** Set when the error can be solved by upgrading. */
+    const [upgradeHint, setUpgradeHint] = useState(false);
+    const pathname = usePathname();
+    const { billingEnabled } = usePlan();
+    const limits = useToolLimits(pathname);
+    const maxFileSizeMB = maxFileSizeOverride ?? limits.maxFileSizeMB;
+    const maxFiles = multiple ? limits.maxFiles : 1;
+    const canUpgrade = billingEnabled && limits.plan === 'free';
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragDepth = useRef(0);
 
     // Track recently used tool on mount
     useEffect(() => {
         addRecentToolHref(window.location.pathname);
+    }, []);
+
+    // "Continue with another tool": pick up the previous tool's result, if it was handed over.
+    const handleFilesRef = useRef<(files: File[]) => void>(() => {});
+    useEffect(() => {
+        handleFilesRef.current = (files) => handleFiles(files);
+    });
+    useEffect(() => {
+        if (variant === 'compact') return;
+        // Claimed inside the timer so React's development double-mount can't lose the file.
+        const timer = setTimeout(() => {
+            const handoff = takeHandoff(accept);
+            if (handoff) handleFilesRef.current([handoff.file]);
+        }, 0);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
     }, []);
 
     const allowedExtensions = accept
@@ -53,9 +86,16 @@ export default function FileUploader({
 
     const validateFiles = (files: File[]): string | null => {
         if (files.length === 0) return 'No files were selected. Please select a valid file.';
+        if (currentCount + files.length > maxFiles) {
+            return canUpgrade
+                ? `The Free plan allows up to ${maxFiles} files per task. Premium allows up to ${getToolLimits(pathname, 'premium').maxFiles}.`
+                : `You can add up to ${maxFiles} files per task.`;
+        }
         for (const file of files) {
             if (file.size / (1024 * 1024) > maxFileSizeMB) {
-                return `File "${file.name}" exceeds the maximum size of ${maxFileSizeMB}MB for in-browser processing.`;
+                return canUpgrade
+                    ? `"${file.name}" is larger than the Free plan limit of ${maxFileSizeMB} MB. Premium handles files up to ${getToolLimits(pathname, 'premium').maxFileSizeMB} MB.`
+                    : `File "${file.name}" exceeds the maximum size of ${maxFileSizeMB}MB for in-browser processing.`;
             }
             if (file.size === 0) return `File "${file.name}" is empty.`;
             if (accept !== '*/*' && allowedExtensions.length > 0) {
@@ -68,12 +108,13 @@ export default function FileUploader({
         return null;
     };
 
-    const handleFiles = (list: FileList | null) => {
+    const handleFiles = (list: FileList | File[] | null) => {
         if (!list || list.length === 0) return;
         const files = Array.from(list);
         const selected = multiple ? files : [files[0]];
         const error = validateFiles(selected);
         setErrorMessage(error);
+        setUpgradeHint(Boolean(error) && canUpgrade && /Free plan/.test(error ?? ''));
         if (!error) onFilesSelected(selected);
     };
 
@@ -107,7 +148,12 @@ export default function FileUploader({
                 </button>
                 {errorMessage && (
                     <p role="alert" style={{ color: 'var(--error)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>
-                        {errorMessage}
+                        {errorMessage}{' '}
+                        {upgradeHint && (
+                            <Link href="/pricing" style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>
+                                Upgrade to Premium
+                            </Link>
+                        )}
                     </p>
                 )}
                 {hiddenInput}
@@ -141,26 +187,25 @@ export default function FileUploader({
                             <AlertCircle size={28} />
                         </div>
                         <h4 style={{ margin: 0, fontWeight: 700, fontSize: 'var(--text-lg)', color: 'var(--error)' }}>
-                            File Validation Error
+                            {upgradeHint ? 'Free plan limit reached' : 'File Validation Error'}
                         </h4>
                         <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-color)', textAlign: 'center', lineHeight: 1.5 }}>
                             {errorMessage}
                         </p>
-                        <button
-                            type="button"
-                            onClick={triggerFilePicker}
-                            className="btn btn-primary"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                minHeight: 'var(--touch-target-min)',
-                                marginTop: '8px',
-                            }}
-                        >
-                            <RefreshCw size={16} />
-                            <span>Select a Different File</span>
-                        </button>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: 8 }}>
+                            {upgradeHint && <Link href="/pricing" className="btn btn-primary" style={{ gap: 8, minHeight: 'var(--touch-target-min)' }}>
+                            <Crown size={16} /> Upgrade to Premium
+                        </Link>}
+                            <button
+                                type="button"
+                                onClick={triggerFilePicker}
+                                className={upgradeHint ? 'btn btn-outline' : 'btn btn-primary'}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minHeight: 'var(--touch-target-min)' }}
+                            >
+                                <RefreshCw size={16} />
+                                <span>Select a Different File</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -217,7 +262,7 @@ export default function FileUploader({
                         <div className={styles.hint}>
                             <span>Supported: {accept}</span>
                             <span>•</span>
-                            <span>Max {maxFileSizeMB}MB</span>
+                            <span>Max {maxFileSizeMB}MB{multiple ? `, ${maxFiles} files` : ''}</span>
                             <span>•</span>
                             <span>100% In-Browser</span>
                         </div>

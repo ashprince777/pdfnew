@@ -1,13 +1,13 @@
 "use client";
 import { useState } from 'react';
-import { PDFDocument } from '@cantoo/pdf-lib';
 import { ArrowRight, ArrowUp, ArrowDown, FileText, GripVertical, Trash2, Lock } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
 import DownloadResult from '@/components/DownloadResult';
 import ReorderableList from '@/components/ReorderableList';
 import { ToolHeader, ToolWorkspace, PrimaryAction, Notice, toolStyles } from '@/components/ToolUI';
-import { formatBytes, loadPdf, PdfToolError, savePdf } from '@/lib/pdf';
+import { formatBytes, loadPdf, PdfToolError, pdfBytesToBlob } from '@/lib/pdf';
+import { runPdfOp } from '@/lib/pdfWorkerClient';
 import { useToolRunner } from '@/lib/useToolRunner';
 
 interface MergeItem {
@@ -52,21 +52,10 @@ export default function MergeClient() {
             return;
         }
         tool.run(async () => {
-            const mergedPdf = await PDFDocument.create();
-            for (let i = 0; i < items.length; i++) {
-                tool.setProgress(`Adding file ${i + 1} of ${items.length}...`);
-                let pdf: PDFDocument;
-                try {
-                    pdf = await loadPdf(items[i].file);
-                } catch (error) {
-                    if (error instanceof PdfToolError) throw new PdfToolError(`"${items[i].file.name}": ${error.message}`);
-                    throw error;
-                }
-                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                copiedPages.forEach((page) => mergedPdf.addPage(page));
-            }
-            tool.setProgress('Saving merged PDF...');
-            return { blob: await savePdf(mergedPdf), filename: 'merged.pdf' };
+            tool.setProgress('Reading files...');
+            const files = await Promise.all(items.map(async (item) => ({ name: item.file.name, bytes: await item.file.arrayBuffer() })));
+            const merged = await runPdfOp('mergePdfs', [files], tool.setProgress);
+            return { blob: pdfBytesToBlob(merged), filename: 'merged.pdf' };
         }, 'An error occurred while merging PDFs. Please try again.');
     };
 
@@ -129,7 +118,7 @@ export default function MergeClient() {
                         )}
                     />
 
-                    <FileUploader onFilesSelected={handleFilesSelected} multiple variant="compact" />
+                    <FileUploader onFilesSelected={handleFilesSelected} multiple variant="compact" currentCount={items.length} />
 
                     {items.length === 1 && <Notice>Add at least one more PDF to merge.</Notice>}
 

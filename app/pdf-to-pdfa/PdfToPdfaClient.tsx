@@ -8,6 +8,7 @@ import DownloadResult from '@/components/DownloadResult';
 import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, Notice } from '@/components/ToolUI';
 import { baseName, loadPdf, savePdf } from '@/lib/pdf';
 import { useToolRunner } from '@/lib/useToolRunner';
+import { UpgradePrompt, usePremiumFeature } from '@/components/PremiumGate';
 
 type Conformance = '1B' | '2B' | '3B';
 
@@ -44,6 +45,7 @@ export default function PdfToPdfaClient() {
     const [conformance, setConformance] = useState<Conformance>('2B');
     const [report, setReport] = useState<string[]>([]);
     const tool = useToolRunner();
+    const allowed = usePremiumFeature('pdfa');
 
     const convertToPdfA = () => {
         if (!file) return;
@@ -85,7 +87,8 @@ export default function PdfToPdfaClient() {
                         We add the PDF/A identification metadata and an sRGB output intent, and check that fonts are embedded.
                         For guaranteed compliance, verify the result with a validator such as veraPDF.
                     </Notice>
-                    <PrimaryAction onClick={convertToPdfA}>
+                    {!allowed && <UpgradePrompt feature="pdfa" />}
+                    <PrimaryAction onClick={convertToPdfA} disabled={!allowed}>
                         Convert to PDF/A <ArrowRight size={22} />
                     </PrimaryAction>
                 </ToolWorkspace>

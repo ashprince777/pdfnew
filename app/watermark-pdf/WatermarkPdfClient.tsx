@@ -8,6 +8,7 @@ import DownloadResult from '@/components/DownloadResult';
 import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, PrimaryAction, toolStyles } from '@/components/ToolUI';
 import { baseName, embedUnicodeFont, getVisualFrame, hexToRgbComponents, loadPdf, PdfToolError, savePdf, toDrawableText } from '@/lib/pdf';
 import { useToolRunner } from '@/lib/useToolRunner';
+import { UpgradePrompt, usePremiumFeature } from '@/components/PremiumGate';
 
 type Kind = 'text' | 'image';
 type Layout = 'diagonal' | 'horizontal';
@@ -62,6 +63,7 @@ export default function WatermarkPdfClient() {
     const [color, setColor] = useState('#cc1a1a');
     const imageInputRef = useRef<HTMLInputElement | null>(null);
     const tool = useToolRunner();
+    const imageAllowed = usePremiumFeature('image-watermark');
 
     // Preview URL for the chosen watermark image, released when it changes or on unmount.
     const imageUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile]);
@@ -70,7 +72,7 @@ export default function WatermarkPdfClient() {
     }, [imageUrl]);
 
     const angle = layout === 'diagonal' ? 45 : 0;
-    const canApply = kind === 'text' ? watermarkText.trim().length > 0 : imageFile !== null;
+    const canApply = kind === 'text' ? watermarkText.trim().length > 0 : imageAllowed && imageFile !== null;
 
     const applyWatermark = () => {
         if (!file) return;
@@ -165,7 +167,7 @@ export default function WatermarkPdfClient() {
                                 onChange={setKind}
                                 options={[
                                     { value: 'text', title: 'Text', text: 'e.g. CONFIDENTIAL, DRAFT' },
-                                    { value: 'image', title: 'Image', text: 'Your logo, stamp or seal' },
+                                    { value: 'image', title: imageAllowed ? 'Image' : 'Image (Premium)', text: 'Your logo, stamp or seal' },
                                 ]}
                             />
 
@@ -302,6 +304,7 @@ export default function WatermarkPdfClient() {
                         <span style={{ position: 'absolute', bottom: 6, right: 8, fontSize: 11, color: '#94a3b8' }}>Preview</span>
                     </div>
 
+                    {kind === 'image' && !imageAllowed && <UpgradePrompt feature="image-watermark" />}
                     <PrimaryAction onClick={applyWatermark} disabled={!canApply}>
                         Apply Watermark <ArrowRight size={20} />
                     </PrimaryAction>

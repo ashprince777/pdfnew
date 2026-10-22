@@ -1,0 +1,64 @@
+import type { Metadata } from 'next';
+import AiPdfTool from '@/components/AiPdfTool';
+import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import FaqSchema from '@/components/FaqSchema';
+import ToolSeoContent from '@/components/ToolSeoContent';
+
+export const metadata: Metadata = {
+    title: 'Translate PDF with AI - Hindi, Tamil, English and 20+ Languages',
+    description: 'Translate the text of a PDF into Hindi, Bengali, Tamil, Telugu, English, Spanish and more with AI. Download the translation as Word.',
+    alternates: {
+        canonical: '/translate-pdf',
+    },
+};
+
+const faqItems = [
+    {
+        question: 'Which languages are supported?',
+        answer: 'English, Hindi, Bengali, Marathi, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi, Urdu, Odia and 10 international languages including Spanish, French, German, Arabic, Chinese and Japanese.',
+    },
+    {
+        question: 'Does it keep the layout?',
+        answer: 'The translation keeps the page order, paragraphs and lists, and is delivered as text or a Word document. The original layout and images are not recreated.',
+    },
+    {
+        question: 'How long can the document be?',
+        answer: 'A few pages of text per request. For longer documents, translate a range of pages at a time (for example 1-2, then 3-4).',
+    },
+    {
+        question: 'How many translations can I do?',
+        answer: 'Each translation uses 1 AI credit. Free accounts get 3 credits a month; Premium gets 200.',
+    },
+];
+
+const benefits = [
+    'Natural-sounding AI translations.',
+    'Indian and international languages.',
+    'Translate the whole document or chosen pages.',
+    'Download as Word to edit or share.',
+];
+
+export default function TranslatePdfPage() {
+    return (
+        <>
+            <BreadcrumbSchema
+                items={[
+                    { name: 'Home', item: '/' },
+                    { name: 'Translate PDF', item: '/translate-pdf' },
+                ]}
+            />
+            <FaqSchema items={faqItems} />
+
+            <AiPdfTool task="translate" />
+
+            <ToolSeoContent
+                toolName="Translate PDF"
+                actionName="Translate"
+                actionDescription="translate PDF documents with AI"
+                benefits={benefits}
+                faqItems={faqItems}
+                ai
+            />
+        </>
+    );
+}
