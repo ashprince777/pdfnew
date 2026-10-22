@@ -10,7 +10,7 @@ export const SITE = {
     /** Legal name of the business or individual operating the site. */
     legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || 'Foxora Digital LLP',
     /** Registered/communication address. */
-    address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || 'Kozhikode (Calicut), Kerala, India',
+    address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || 'Thundiyil Building, M Kanaran Road, East Nadakkave, Nadakkave, Kozhikode, Keralam 673006, India',
     /** Customer support phone, shown with the country code. */
     phone: process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+91 98097 25430',
     /** Courts with jurisdiction over disputes. */
