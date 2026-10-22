@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import PricingClient from './PricingClient';
 
 export const metadata: Metadata = {
@@ -8,10 +7,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/pricing' },
 };
 
-export default function PricingPage() {
-    return (
-        <Suspense>
-            <PricingClient />
-        </Suspense>
-    );
+export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+    const params = await searchParams;
+    return <PricingClient initialInterval={params.interval === 'monthly' ? 'monthly' : 'yearly'} autoCheckout={params.checkout === '1'} />;
 }

@@ -138,6 +138,16 @@
     margin-top: -8px;
 }
 
+.priceSummary {
+    margin-top: 14px;
+    font-size: var(--text-sm);
+    color: var(--text-light);
+}
+
+.priceSummary strong {
+    color: var(--text-color);
+}
+
 .trialNote {
     font-size: var(--text-sm);
     line-height: 1.5;

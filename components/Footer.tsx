@@ -48,7 +48,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
             { href: '/privacy', label: 'Privacy Policy' },
             { href: '/terms', label: 'Terms & Conditions' },
             { href: '/refund-policy', label: 'Refund Policy' },
-            { href: '/deletion-policy', label: 'File Security' },
+            { href: '/shipping-policy', label: 'Shipping & Delivery' },
+            { href: '/deletion-policy', label: 'File Deletion Policy' },
         ],
     },
 ];
@@ -81,7 +82,7 @@ export default function Footer() {
                         <ShieldCheck size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
                         Every PDF tool runs in your browser. Your files are never uploaded.
                     </p>
-                    <p>&copy; {new Date().getFullYear()} {SITE.name}. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} {SITE.name}, a {SITE.legalName} brand. All rights reserved.</p>
                 </div>
             </div>
         </footer>

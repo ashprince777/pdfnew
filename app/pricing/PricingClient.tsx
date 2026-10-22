@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Check, Crown } from 'lucide-react';
 import { usePlan } from '@/components/PlanProvider';
 import { useToast } from '@/components/ToastProvider';
@@ -48,12 +48,12 @@ const FAQ = [
     },
 ];
 
-export default function PricingClient() {
+/** `interval` and `checkout` come from the URL, read on the server so the page (and its prices) render without JavaScript. */
+export default function PricingClient({ initialInterval, autoCheckout }: { initialInterval: BillingInterval; autoCheckout: boolean }) {
     const { billingEnabled, user, isPremium, loading, subscription, refresh } = usePlan();
     const { showToast } = useToast();
     const router = useRouter();
-    const params = useSearchParams();
-    const [interval, setBillingInterval] = useState<BillingInterval>(params.get('interval') === 'monthly' ? 'monthly' : 'yearly');
+    const [interval, setBillingInterval] = useState<BillingInterval>(initialInterval);
     const [busy, setBusy] = useState(false);
     const [trialEligible, setTrialEligible] = useState(true);
     const autoStarted = useRef(false);
@@ -99,7 +99,7 @@ export default function PricingClient() {
 
     // Coming back from sign-up with ?checkout=1: continue straight to payment.
     useEffect(() => {
-        if (autoStarted.current || loading || !user || premiumActive || params.get('checkout') !== '1') return;
+        if (autoStarted.current || loading || !user || premiumActive || !autoCheckout) return;
         autoStarted.current = true;
         void upgrade(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the session is ready
@@ -112,6 +112,10 @@ export default function PricingClient() {
             <div className={styles.header}>
                 <h1 className={styles.title}>Simple pricing. Private by design.</h1>
                 <p className={styles.subtitle}>Every PDF tool runs in your browser on every plan. Premium unlocks bigger files, more files per task and pro features.</p>
+                <p className={styles.priceSummary} data-testid="price-summary">
+                    <strong>Free</strong> forever · <strong>Premium</strong>{' '}
+                    {`${CURRENCY_SYMBOL}${PREMIUM_PRICES_INR.monthly} a month or ${CURRENCY_SYMBOL}${PREMIUM_PRICES_INR.yearly.toLocaleString('en-IN')} a year (taxes included) · ${TRIAL_DAYS}-day free trial for new subscribers`}
+                </p>
             </div>
 
             {!billingEnabled && (
@@ -143,7 +147,7 @@ export default function PricingClient() {
                         <p className={styles.planTagline}>For everyday PDF tasks</p>
                     </div>
                     <div className={styles.price}>
-                        <span className={styles.amount}>{CURRENCY_SYMBOL}0</span>
+                        <span className={styles.amount}>{`${CURRENCY_SYMBOL}0`}</span>
                         <span className={styles.per}>forever</span>
                     </div>
                     <p className={styles.billedNote}>No credit card needed</p>
@@ -164,7 +168,7 @@ export default function PricingClient() {
                         <p className={styles.planTagline}>For professionals and heavy users</p>
                     </div>
                     <div className={styles.price}>
-                        <span className={styles.amount}>{CURRENCY_SYMBOL}{price}</span>
+                        <span className={styles.amount}>{`${CURRENCY_SYMBOL}${price}`}</span>
                         <span className={styles.per}>/ month</span>
                     </div>
                     <p className={styles.billedNote}>

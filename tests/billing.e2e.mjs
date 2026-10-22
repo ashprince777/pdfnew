@@ -270,7 +270,10 @@ await check('pricing page and auth pages render', async () => {
     await page.getByRole('button', { name: /Start 7-day free trial/ }).waitFor({ timeout: 10000 });
     assert(await page.getByTestId('trial-note').isVisible(), 'trial note missing');
     await page.getByRole('radio', { name: /Monthly/ }).click();
-    await page.getByText('₹299').waitFor();
+    await page.getByText('₹299', { exact: true }).waitFor();
+    // Prices must be in the server-rendered HTML (payment reviewers and search engines read it without JavaScript).
+    const html = await (await fetch(`${APP}/pricing`)).text();
+    assert(html.includes('₹299') && html.includes('1,999') && html.includes('7-day free trial'), 'prices missing from server HTML');
     await page.screenshot({ path: `${OUTPUT}/billing-pricing.png`, fullPage: true });
     await page.goto(`${APP}/login`, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Continue with Google' }).waitFor();
