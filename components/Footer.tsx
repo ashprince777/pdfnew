@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
+import { SITE } from '@/lib/site';
+import BrandLogo from './BrandLogo';
 import styles from './Footer.module.css';
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
@@ -55,6 +57,12 @@ export default function Footer() {
     return (
         <footer className={styles.footer}>
             <div className={`container ${styles.container}`}>
+                <div className={styles.brandRow}>
+                    <Link href="/" aria-label={`${SITE.name} home`}>
+                        <BrandLogo height={40} onDark />
+                    </Link>
+                    <p className={styles.tagline}>Free, private PDF tools you&apos;ll adore. Everything runs in your browser.</p>
+                </div>
                 <div className={styles.grid}>
                     {COLUMNS.map((column) => (
                         <nav key={column.title} className={styles.links} aria-label={column.title}>
@@ -73,7 +81,7 @@ export default function Footer() {
                         <ShieldCheck size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
                         Every PDF tool runs in your browser. Your files are never uploaded.
                     </p>
-                    <p>&copy; {new Date().getFullYear()} MyOnlinePDF. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} {SITE.name}. All rights reserved.</p>
                 </div>
             </div>
         </footer>

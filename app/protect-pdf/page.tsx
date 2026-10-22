@@ -27,7 +27,7 @@ const faqItems = [
     },
     {
         question: 'Does this run in the browser?',
-        answer: 'Yes. Like every MyOnlinePDF tool, encryption runs entirely in your browser. Nothing is uploaded to a server.'
+        answer: 'Yes. Like every PDFAdore tool, encryption runs entirely in your browser. Nothing is uploaded to a server.'
     }
 ];
 

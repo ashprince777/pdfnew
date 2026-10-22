@@ -7,7 +7,7 @@ import { SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
     title: 'Contact Us',
-    description: 'Get in touch with the MyOnlinePDF team. We are here to help with any questions or feedback.',
+    description: 'Get in touch with the PDFAdore team. We are here to help with any questions or feedback.',
     alternates: {
         canonical: '/contact',
     },

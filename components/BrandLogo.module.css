@@ -1,0 +1,23 @@
+.wrap {
+    display: inline-flex;
+    align-items: center;
+}
+
+.logo {
+    display: block;
+    height: 100%;
+    width: auto;
+}
+
+.hidden,
+.dark {
+    display: none;
+}
+
+:global([data-theme='dark']) .light {
+    display: none;
+}
+
+:global([data-theme='dark']) .dark {
+    display: block;
+}

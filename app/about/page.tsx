@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'About Us',
-    description: 'MyOnlinePDF offers free, private PDF tools that run entirely in your browser.',
+    description: 'PDFAdore offers free, private PDF tools that run entirely in your browser.',
     alternates: {
         canonical: '/about',
     },
@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 export default function AboutPage() {
     return (
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px' }}>
-            <h1>About MyOnlinePDF</h1>
+            <h1>About PDFAdore</h1>
             <p className="lead">We make working with PDFs easy.</p>
 
             <p className="mt-4">
-                MyOnlinePDF was born from the need for a simple, accessible, and fast solution for PDF manipulation.
+                PDFAdore was born from the need for a simple, accessible, and fast solution for PDF manipulation.
                 Our goal is to provide high-quality tools that are free to use for everyone.
             </p>
 

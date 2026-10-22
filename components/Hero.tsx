@@ -12,9 +12,11 @@ export default function Hero() {
                     <PrivacyTrustBadge variant="prominent" />
                 </div>
 
-                <h1 className={styles.title}>Every tool you need to work with PDFs</h1>
+                <h1 className={styles.title}>
+                    Every PDF tool you&apos;ll <span className="text-gradient">adore</span>
+                </h1>
                 <p className={styles.subtitle}>
-                    Merge, split, compress, convert, rotate, unlock, and watermark documents in seconds with zero uploads.
+                    Merge, split, compress, convert, sign, edit and protect documents in seconds, right in your browser, with zero uploads.
                 </p>
 
                 <div className={styles.cta}>

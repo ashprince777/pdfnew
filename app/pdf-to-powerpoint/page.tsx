@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     description: 'Convert your PDF files to editable PowerPoint presentations (PPTX) online for free. No registration needed.',
     keywords: ['pdf to powerpoint', 'pdf to pptx', 'convert pdf to pptx', 'free pdf converter'],
     alternates: {
-        canonical: 'https://myonlinepdf.com/pdf-to-powerpoint',
+        canonical: 'https://www.pdfadore.com/pdf-to-powerpoint',
     },
 };
 

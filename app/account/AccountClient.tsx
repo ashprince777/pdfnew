@@ -123,7 +123,7 @@ export default function AccountClient() {
                     <div style={{ display: 'grid', gap: 12 }}>
                         <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 'var(--text-lg)' }}>
                             <Crown size={20} style={{ color: 'var(--primary)' }} /> Premium ({sub.billing_interval === 'yearly' ? 'yearly' : 'monthly'})
-                            {inTrial && <span data-testid="trial-badge" style={{ fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'var(--primary)', color: '#fff' }}>Free trial</span>}
+                            {inTrial && <span data-testid="trial-badge" style={{ fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'var(--brand-gradient)', color: '#fff' }}>Free trial</span>}
                         </p>
                         <p className={toolStyles.hint} style={{ fontSize: 'var(--text-sm)' }}>
                             {inTrial && renewing

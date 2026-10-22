@@ -52,7 +52,7 @@ export default function PdfToPdfaClient() {
         tool.run(async () => {
             const pdfDoc = await loadPdf(file);
             if (!pdfDoc.getTitle()) pdfDoc.setTitle(baseName(file.name));
-            pdfDoc.setProducer('MyOnlinePDF');
+            pdfDoc.setProducer('PDFAdore');
             pdfDoc.convertToPDFA({ conformance });
 
             const issues: string[] = [];

@@ -5,7 +5,7 @@ import { CURRENCY_SYMBOL, PREMIUM_PRICES_INR, TRIAL_DAYS } from '@/lib/plans';
 
 export const metadata: Metadata = {
     title: 'Cancellation & Refund Policy',
-    description: 'How cancellations and refunds work for MyOnlinePDF Premium subscriptions.',
+    description: 'How cancellations and refunds work for PDFAdore Premium subscriptions.',
     alternates: { canonical: '/refund-policy' },
 };
 

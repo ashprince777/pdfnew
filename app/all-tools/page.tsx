@@ -6,7 +6,7 @@ import styles from '../page.module.css';
 
 export const metadata: Metadata = {
     title: 'All PDF Tools',
-    description: 'Every free MyOnlinePDF tool in one place: merge, split, compress, convert, edit, sign and secure PDFs in your browser.',
+    description: 'Every free PDFAdore tool in one place: merge, split, compress, convert, edit, sign and secure PDFs in your browser.',
     alternates: {
         canonical: '/all-tools',
     },

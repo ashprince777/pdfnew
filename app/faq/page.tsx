@@ -6,7 +6,7 @@ import Accordion from '@/components/Accordion';
 
 export const metadata: Metadata = {
     title: 'FAQ - Common Questions',
-    description: 'Frequently asked questions about MyOnlinePDF. Learn about our free PDF tools, security, privacy, and how to use our services.',
+    description: 'Frequently asked questions about PDFAdore. Learn about our free PDF tools, security, privacy, and how to use our services.',
     alternates: {
         canonical: '/faq',
     },
@@ -14,15 +14,15 @@ export const metadata: Metadata = {
 
 const faqItems = [
     {
-        question: 'Is MyOnlinePDF free to use?',
-        answer: 'Yes! MyOnlinePDF is completely free to use. You do not need to register, sign up, or pay for any subscription to access our core PDF tools.',
+        question: 'Is PDFAdore free to use?',
+        answer: 'Yes! PDFAdore is completely free to use. You do not need to register, sign up, or pay for any subscription to access our core PDF tools.',
     },
     {
         question: 'Are my files stored on your servers?',
         answer: 'No. Every tool processes your files entirely within your web browser. Your files are never uploaded, so there is nothing for us to store.',
     },
     {
-        question: 'Is it safe to use MyOnlinePDF?',
+        question: 'Is it safe to use PDFAdore?',
         answer: 'Yes. Because all processing happens locally on your device, your documents are never transmitted over the network. The site itself is served over HTTPS.',
     },
     {

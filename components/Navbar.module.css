@@ -35,13 +35,8 @@
     letter-spacing: -0.02em;
 }
 
-.logoBadge {
-    background: var(--primary);
-    color: white;
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
-    font-weight: 900;
+.logo:hover {
+    opacity: 0.92;
 }
 
 .desktopMenu {
@@ -103,7 +98,7 @@
 }
 
 .btnAll {
-    background: var(--accent);
+    background: var(--brand-gradient);
     color: #ffffff !important;
     padding: 8px 16px;
     border-radius: var(--radius-full);

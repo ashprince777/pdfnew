@@ -13,7 +13,7 @@ export default function BreadcrumbSchema({ items }: { items: BreadcrumbItem[] })
             '@type': 'ListItem',
             position: index + 1,
             name: item.name,
-            item: `https://myonlinepdf.com${item.item}`,
+            item: `https://www.pdfadore.com${item.item}`,
         })),
     };
 

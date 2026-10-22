@@ -195,20 +195,20 @@ export default function RedactPdfClient() {
                                     <div
                                         key={index}
                                         data-testid="redact-box"
-                                        style={{ position: 'absolute', left: pct(box.x), top: pct(box.y), width: pct(box.w), height: pct(box.h), background: 'rgba(0,0,0,0.8)', outline: '1px solid #e11d48' }}
+                                        style={{ position: 'absolute', left: pct(box.x), top: pct(box.y), width: pct(box.w), height: pct(box.h), background: 'rgba(0,0,0,0.8)', outline: '1px solid #f43f5e' }}
                                     >
                                         <button
                                             type="button"
                                             aria-label="Remove this redaction"
                                             onClick={() => setBoxes((prev) => prev.filter((_, i) => i !== index))}
-                                            style={{ position: 'absolute', top: -9, right: -9, width: 18, height: 18, borderRadius: '50%', border: 'none', background: '#e11d48', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer' }}
+                                            style={{ position: 'absolute', top: -9, right: -9, width: 18, height: 18, borderRadius: '50%', border: 'none', background: '#f43f5e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer' }}
                                         >
                                             <X size={12} />
                                         </button>
                                     </div>
                                 ))}
                                 {draft && (
-                                    <div style={{ position: 'absolute', left: pct(draft.x), top: pct(draft.y), width: pct(draft.w), height: pct(draft.h), background: 'rgba(0,0,0,0.5)', border: '1px dashed #e11d48' }} />
+                                    <div style={{ position: 'absolute', left: pct(draft.x), top: pct(draft.y), width: pct(draft.w), height: pct(draft.h), background: 'rgba(0,0,0,0.5)', border: '1px dashed #f43f5e' }} />
                                 )}
                             </PdfPagePreview>
                         </OptionsCard>

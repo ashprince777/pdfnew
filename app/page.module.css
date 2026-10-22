@@ -37,7 +37,7 @@
 }
 
 .activeTab {
-  background-color: var(--primary) !important;
+  background: var(--brand-gradient) !important;
   border-color: var(--primary) !important;
   color: #ffffff !important;
   box-shadow: var(--shadow-sm);

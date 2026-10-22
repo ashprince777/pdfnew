@@ -369,7 +369,7 @@ export default function AiPdfTool({ task }: { task: AiTask }) {
                                         <div style={{ display: 'grid', gap: 12, maxHeight: '55vh', overflowY: 'auto' }} aria-live="polite">
                                             {chat.length === 0 && !busy && <p className={toolStyles.hint}>Ask anything about the document, for example &quot;What is the total amount?&quot; or &quot;List the deadlines&quot;. Each question uses 1 credit.</p>}
                                             {chat.map((turn, i) => (
-                                                <div key={i} data-testid={`chat-${turn.role}`} style={{ justifySelf: turn.role === 'user' ? 'end' : 'start', maxWidth: '85%', whiteSpace: 'pre-wrap', padding: '10px 14px', borderRadius: 14, background: turn.role === 'user' ? 'var(--primary)' : 'var(--section-alt)', color: turn.role === 'user' ? '#fff' : 'inherit' }}>
+                                                <div key={i} data-testid={`chat-${turn.role}`} style={{ justifySelf: turn.role === 'user' ? 'end' : 'start', maxWidth: '85%', whiteSpace: 'pre-wrap', padding: '10px 14px', borderRadius: 14, background: turn.role === 'user' ? 'var(--brand-gradient)' : 'var(--section-alt)', color: turn.role === 'user' ? '#fff' : 'inherit' }}>
                                                     {turn.content}
                                                 </div>
                                             ))}

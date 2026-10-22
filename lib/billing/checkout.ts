@@ -82,10 +82,10 @@ export async function startPremiumCheckout(interval: BillingInterval): Promise<C
         const checkout = new Razorpay({
             key: keyId,
             subscription_id: subscriptionId,
-            name: 'MyOnlinePDF',
+            name: 'PDFAdore',
             description: trialEndsAt ? `${TRIAL_DAYS}-day free trial, then ${price}` : `Premium, ${price}`,
             prefill: email ? { email } : undefined,
-            theme: { color: '#e11d48' },
+            theme: { color: '#6d28d9' },
             handler: (response: RazorpayResponse) => {
                 postJson('/api/billing/verify', response).then(() => resolve({ trialEndsAt }), reject);
             },

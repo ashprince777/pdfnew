@@ -566,7 +566,7 @@ export default function SignPdfClient() {
                                         width: `${placement.width * 100}%`,
                                         height: `${boxHeight * 100}%`,
                                         border: '2px dashed var(--primary)',
-                                        background: signature ? 'rgba(225, 29, 72, 0.06)' : 'rgba(225, 29, 72, 0.12)',
+                                        background: signature ? 'rgba(109, 40, 217, 0.06)' : 'rgba(109, 40, 217, 0.12)',
                                         cursor: 'move',
                                         display: 'flex',
                                         alignItems: 'center',

@@ -1,4 +1,4 @@
-# MyOnlinePDF
+# PDFAdore
 
 Free online PDF tools (merge, split, compress, convert, edit, sign, protect, redact, fill forms, scan and more) that run **entirely in the browser**. Files are never uploaded: every PDF tool reads the file locally, processes it with JavaScript/WebAssembly (heavy work runs in a Web Worker) and hands back a `blob:` download link.
 

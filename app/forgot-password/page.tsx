@@ -4,7 +4,7 @@ import { ForgotPasswordForm } from '@/components/auth/AuthForms';
 
 export const metadata: Metadata = {
     title: 'Forgot password',
-    description: 'Reset your MyOnlinePDF password.',
+    description: 'Reset your PDFAdore password.',
     robots: { index: false },
 };
 

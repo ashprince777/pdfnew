@@ -8,6 +8,7 @@ import CommandPalette from './CommandPalette';
 import MobileDrawer from './MobileDrawer';
 import AccountButton from './AccountButton';
 import { usePlan } from './PlanProvider';
+import BrandLogo from './BrandLogo';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -42,9 +43,8 @@ export default function Navbar() {
             <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ''}`}>
                 <div className={`container ${styles.navContainer}`}>
                     {/* Brand */}
-                    <Link href="/" className={styles.logo}>
-                        <span className={styles.logoBadge}>PDF</span>
-                        <span>Tools</span>
+                    <Link href="/" className={styles.logo} aria-label="PDFAdore home">
+                        <BrandLogo height={42} />
                     </Link>
 
                     {/* Desktop Menu */}

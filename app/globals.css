@@ -1,38 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  /* --- Brand & Accent Palette --- */
-  --primary: #e11d48;              /* Balanced Crimson / Rose 600 */
-  --primary-hover: #be123c;        /* Deep Crimson */
-  --primary-subtle: #ffe4e6;       /* Soft crimson tint */
-  
-  --accent: #4f46e5;               /* Modern Indigo Accent */
-  --accent-hover: #4338ca;
-  --accent-subtle: #e0e7ff;
+  /* --- Brand palette (from the pdfadore logo: violet #6d28d9 → rose #f43f5e) --- */
+  --primary: #6d28d9;              /* Logo violet */
+  --primary-hover: #5b21b6;
+  --primary-subtle: #ede9fe;       /* Logo lavender */
+
+  --accent: #f43f5e;               /* Logo rose */
+  --accent-hover: #e11d48;
+  --accent-subtle: #ffe4e6;
+
+  --brand-gradient: linear-gradient(135deg, #6d28d9 0%, #f43f5e 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #5b21b6 0%, #e11d48 100%);
+  --brand-ink: #1e1b2e;            /* Logo "pdf" ink */
 
   --success: #10b981;              /* Emerald */
   --warning: #f59e0b;              /* Amber */
   --error: #ef4444;                /* Coral Red */
 
   /* --- Category Palette (Unified across all 6 domains) --- */
-  --cat-organize: #e11d48;         /* Rose / Crimson */
+  --cat-organize: #db2777;         /* Pink */
   --cat-optimize: #10b981;         /* Emerald */
   --cat-to-pdf: #2563eb;           /* Blue */
   --cat-from-pdf: #0891b2;         /* Cyan */
-  --cat-edit: #8b5cf6;             /* Purple */
+  --cat-edit: #7c3aed;             /* Violet */
   --cat-security: #dc2626;         /* Ruby Red */
   --cat-ai: #d97706;               /* Amber */
 
   /* --- Neutrals & Surfaces (Light Mode) --- */
-  --bg-color: #f8fafc;             /* Slate 50 canvas */
+  --bg-color: #faf9fe;             /* Lavender-tinted canvas */
   --card-bg: #ffffff;              /* Elevated card background */
   --card-surface: #ffffff;         /* Pure white surface */
-  --section-alt: #f1f5f9;          /* Slate 100 alternating section */
-  --border-color: #e2e8f0;         /* Slate 200 */
-  --border-focus: #cbd5e1;         /* Slate 300 */
+  --section-alt: #f5f3ff;          /* Logo lavender, alternating sections */
+  --border-color: #e9e5f5;
+  --border-focus: #c4b5fd;
 
-  --text-color: #0f172a;           /* Slate 900 primary text */
-  --text-light: #64748b;           /* Slate 500 secondary text */
+  --text-color: #1e1b2e;           /* Logo ink */
+  --text-light: #6b6880;           /* Muted ink */
 
   /* --- Spacing Scale (4px/8px base grid) --- */
   --space-1: 0.25rem;              /* 4px */
@@ -47,12 +51,14 @@
   --radius: 12px;
   --radius-sm: 8px;
   --radius-full: 9999px;
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --shadow-sm: 0 1px 3px rgba(30, 27, 46, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(30, 27, 46, 0.08), 0 2px 4px -2px rgba(30, 27, 46, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(30, 27, 46, 0.08), 0 4px 6px -4px rgba(30, 27, 46, 0.03);
+  --shadow-brand: 0 8px 24px -6px rgba(109, 40, 217, 0.45);
 
   /* --- Typography Scale --- */
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-poppins), 'Poppins', var(--font-family);
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -66,21 +72,25 @@
 }
 
 [data-theme='dark'] {
-  /* --- Brand & Accent Palette (Dark Mode calibrated) --- */
-  --primary: #f43f5e;              /* Vibrant Rose */
-  --primary-hover: #fb7185;
-  --primary-subtle: rgba(244, 63, 94, 0.15);
+  /* --- Brand palette (dark mode: lighter tints keep text readable) --- */
+  --primary: #a78bfa;              /* Violet 400 */
+  --primary-hover: #c4b5fd;
+  --primary-subtle: rgba(139, 92, 246, 0.18);
 
-  --accent: #6366f1;               /* Indigo 500 */
-  --accent-hover: #818cf8;
-  --accent-subtle: rgba(99, 102, 241, 0.15);
+  --accent: #fb7185;               /* Rose 400 */
+  --accent-hover: #fda4af;
+  --accent-subtle: rgba(244, 63, 94, 0.16);
+
+  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #f43f5e 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #8b5cf6 0%, #fb7185 100%);
+  --brand-ink: #f5f3ff;
 
   --success: #34d399;
   --warning: #fbbf24;
   --error: #f87171;
 
   /* --- Category Palette (Dark Mode Vibrancy) --- */
-  --cat-organize: #fb7185;
+  --cat-organize: #f472b6;
   --cat-optimize: #34d399;
   --cat-to-pdf: #60a5fa;
   --cat-from-pdf: #22d3ee;
@@ -89,19 +99,20 @@
   --cat-ai: #fbbf24;
 
   /* --- Neutrals & Surfaces (Dark Slate) --- */
-  --bg-color: #0b0f19;             /* Midnight slate canvas */
-  --card-bg: #141c2e;              /* Elevated card background */
-  --card-surface: #141c2e;         /* Pure dark surface */
-  --section-alt: #0e1424;          /* Distinct alternating section */
-  --border-color: #243049;         /* Clean slate borders */
-  --border-focus: #3b82f6;
+  --bg-color: #0f0d1a;             /* Logo dark background */
+  --card-bg: #18152a;              /* Elevated card background */
+  --card-surface: #18152a;
+  --section-alt: #131022;          /* Alternating section */
+  --border-color: #2c2745;
+  --border-focus: #8b5cf6;
 
-  --text-color: #f8fafc;           /* Crisp slate white */
-  --text-light: #94a3b8;           /* Muted secondary text */
+  --text-color: #f5f3ff;           /* Logo lavender white */
+  --text-light: #a5a1bd;           /* Muted secondary text */
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.65);
+  --shadow-brand: 0 8px 24px -6px rgba(124, 58, 237, 0.55);
 }
 
 /*
@@ -128,6 +139,15 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--primary-subtle);
+}
 }
 
 @layer components {
@@ -150,14 +170,25 @@ a {
   font-size: 1rem;
 }
 
+/* Primary actions use the logo gradient. */
 .btn-primary {
-  background-color: var(--primary);
+  background-color: #6d28d9;
+  background-image: var(--brand-gradient);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
+  background-image: var(--brand-gradient-hover);
+  box-shadow: var(--shadow-brand);
   transform: translateY(-1px);
+}
+
+/* Gradient text, like "adore" in the logo. */
+.text-gradient {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .btn-outline {

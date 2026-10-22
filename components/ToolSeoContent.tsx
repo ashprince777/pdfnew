@@ -23,11 +23,11 @@ export default function ToolSeoContent({
         <div className="prose max-w-4xl mx-auto py-12 px-4 md:px-0">
             <h2 className="text-3xl font-bold mb-6">The Best Free Online {toolName} Tool</h2>
             <p className="text-lg text-gray-700 mb-6">
-                Need to {actionDescription}? MyOnlinePDF best-in-class {toolName} tool allows you to {actionDescription.toLowerCase()} quickly, safely, and for free.
+                Need to {actionDescription}? PDFAdore best-in-class {toolName} tool allows you to {actionDescription.toLowerCase()} quickly, safely, and for free.
                 Whether for business, school, or personal use, our platform handles your documents with precision.
             </p>
 
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Why Use MyOnlinePDF?</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Why Use PDFAdore?</h2>
             <div className="grid md:grid-cols-2 gap-6 mb-10">
                 <div className="bg-gray-50 p-6 rounded-lg">
                     <h3 className="text-xl font-bold mb-2">Secure & Private</h3>

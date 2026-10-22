@@ -4,7 +4,7 @@ import { SignupForm } from '@/components/auth/AuthForms';
 
 export const metadata: Metadata = {
     title: 'Sign up',
-    description: 'Create a free MyOnlinePDF account. Upgrade to Premium for bigger files, more files per task, OCR and more.',
+    description: 'Create a free PDFAdore account. Upgrade to Premium for bigger files, more files per task, OCR and more.',
     robots: { index: false },
 };
 

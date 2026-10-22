@@ -4,7 +4,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
 export const metadata: Metadata = {
     title: 'File Deletion Policy',
-    description: 'Learn how MyOnlinePDF handles your files. We prioritize your privacy with strict file deletion policies.',
+    description: 'Learn how PDFAdore handles your files. We prioritize your privacy with strict file deletion policies.',
     alternates: {
         canonical: '/deletion-policy',
     },
@@ -25,7 +25,7 @@ export default function DeletionPolicyPage() {
 
                 <div className="prose">
                     <p className="mb-4">
-                        At MyOnlinePDF, strict file security and deletion standards are our top priority. We understand that your documents are important and private.
+                        At PDFAdore, strict file security and deletion standards are our top priority. We understand that your documents are important and private.
                     </p>
 
                     <h2 className="text-xl font-semibold mt-6 mb-3">Client-Side Processing</h2>

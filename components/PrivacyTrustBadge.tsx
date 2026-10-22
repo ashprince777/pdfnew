@@ -122,7 +122,7 @@ export default function PrivacyTrustBadge({ variant = 'compact', className = '' 
                         </div>
 
                         <p style={{ fontSize: 'var(--text-sm)', lineHeight: 1.6, color: 'var(--text-light)', marginBottom: '16px' }}>
-                            Unlike traditional online PDF converters that transmit your sensitive financial, personal, or corporate documents to external cloud servers, <strong>MyOnlinePDF processes your files directly inside your browser</strong> using WebAssembly and client-side memory buffers.
+                            Unlike traditional online PDF converters that transmit your sensitive financial, personal, or corporate documents to external cloud servers, <strong>PDFAdore processes your files directly inside your browser</strong> using WebAssembly and client-side memory buffers.
                         </p>
 
                         <ul style={{ fontSize: 'var(--text-xs)', color: 'var(--text-light)', paddingLeft: '20px', lineHeight: 1.8, marginBottom: '20px' }}>

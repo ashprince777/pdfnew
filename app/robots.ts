@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/api/', '/_next/', '/account', '/auth/', '/reset-password'],
         },
-        sitemap: 'https://myonlinepdf.com/sitemap.xml',
+        sitemap: 'https://www.pdfadore.com/sitemap.xml',
     };
 }

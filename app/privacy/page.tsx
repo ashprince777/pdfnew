@@ -3,7 +3,7 @@ import { SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
     title: 'Privacy Policy',
-    description: 'How MyOnlinePDF handles your data: all PDF processing happens in your browser and your files are never uploaded.',
+    description: 'How PDFAdore handles your data: all PDF processing happens in your browser and your files are never uploaded.',
     alternates: {
         canonical: '/privacy',
     },
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
             <p className="text-muted">Last updated: {LAST_UPDATED}</p>
 
             <h2 className="mt-4">1. Introduction</h2>
-            <p>Welcome to MyOnlinePDF. We respect your privacy and are committed to protecting your personal data.</p>
+            <p>Welcome to PDFAdore. We respect your privacy and are committed to protecting your personal data.</p>
 
             <h2 className="mt-4">2. Your Files</h2>
             <p>

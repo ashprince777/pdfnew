@@ -99,7 +99,7 @@
 
 .segment:hover {
     outline: 1px solid var(--accent);
-    background: rgba(79, 70, 229, 0.08);
+    background: rgba(109, 40, 217, 0.08);
 }
 
 .cover {
@@ -191,7 +191,7 @@
 
 .floatingToolbar button.active,
 .floatingToolbar button.active:hover {
-    background: var(--accent);
+    background: var(--brand-gradient);
     color: #fff;
 }
 
@@ -222,7 +222,7 @@
 .imageTarget {
     position: absolute;
     outline: 2px dashed var(--accent);
-    background: rgba(79, 70, 229, 0.08);
+    background: rgba(109, 40, 217, 0.08);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -233,7 +233,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: var(--accent);
+    background: var(--brand-gradient);
     color: #fff;
     font-size: 12px;
     padding: 4px 8px;

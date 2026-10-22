@@ -1,10 +1,27 @@
 .footer {
-    background-color: #2b2e31;
-    /* Dark gray similar to screenshot */
+    /* The logo's dark background, with a thin brand-gradient line on top. */
+    background-color: #0f0d1a;
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #6d28d9, #f43f5e) 1;
     color: #ffffff;
-    padding: 60px 0 20px;
+    padding: 56px 0 20px;
     margin-top: auto;
-    font-family: sans-serif;
+}
+
+.brandRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 32px;
+    margin-bottom: 36px;
+    border-bottom: 1px solid #2c2745;
+}
+
+.tagline {
+    color: #a5a1bd;
+    font-size: 0.95rem;
 }
 
 .container {
@@ -35,14 +52,14 @@
 }
 
 .links a {
-    color: #bfbfbf;
+    color: #a5a1bd;
     font-size: 0.9rem;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .links a:hover {
-    color: #ffffff;
+    color: #f5f3ff;
     text-decoration: underline;
 }
 

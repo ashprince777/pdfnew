@@ -4,7 +4,7 @@ import { LoginForm } from '@/components/auth/AuthForms';
 
 export const metadata: Metadata = {
     title: 'Log in',
-    description: 'Log in to your MyOnlinePDF account.',
+    description: 'Log in to your PDFAdore account.',
     robots: { index: false },
 };
 

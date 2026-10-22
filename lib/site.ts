@@ -4,11 +4,11 @@
  * your real legal name, address and support email (see docs/SETUP-SUBSCRIPTIONS.md).
  */
 export const SITE = {
-    name: 'MyOnlinePDF',
-    url: 'https://myonlinepdf.com',
-    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@myonlinepdf.com',
+    name: 'PDFAdore',
+    url: 'https://www.pdfadore.com',
+    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@pdfadore.com',
     /** Legal name of the business or individual operating the site. */
-    legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || 'MyOnlinePDF',
+    legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || 'PDFAdore',
     /** Registered/communication address. */
     address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || 'India',
     /** Courts with jurisdiction over disputes. */

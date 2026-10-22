@@ -18,8 +18,8 @@ All variables are listed in [`.env.example`](../.env.example).
    If you already ran 0001 earlier, just run 0002 and 0003. Until 0002 is run, checkout simply
    charges straight away (no trial); until 0003 is run, AI tools answer "not available yet".
 3. **Authentication → URL Configuration**
-   - Site URL: `https://pdfnew.vercel.app` (or your custom domain)
-   - Redirect URLs: add `https://pdfnew.vercel.app/auth/callback` and `http://localhost:3000/auth/callback`
+   - Site URL: `https://www.pdfadore.com` (or your custom domain)
+   - Redirect URLs: add `https://www.pdfadore.com/auth/callback` and `http://localhost:3000/auth/callback`
 4. **Authentication → Sign In / Providers → Google**: enable it. Create OAuth credentials in
    Google Cloud Console (APIs & Services → Credentials → OAuth client ID → Web application) with the
    authorised redirect URI Supabase shows you, then paste the client ID and secret into Supabase.
@@ -45,7 +45,7 @@ All variables are listed in [`.env.example`](../.env.example).
 4. **Account & Settings → API Keys**: generate a key pair. The key ID goes in both
    `RAZORPAY_KEY_ID` and `NEXT_PUBLIC_RAZORPAY_KEY_ID`; the secret in `RAZORPAY_KEY_SECRET`.
 5. **Account & Settings → Webhooks → Add new webhook**
-   - URL: `https://pdfnew.vercel.app/api/billing/webhook`
+   - URL: `https://www.pdfadore.com/api/billing/webhook`
    - Secret: a long random string, also set as `RAZORPAY_WEBHOOK_SECRET`
    - Events: all `subscription.*` events (activated, charged, pending, halted, cancelled, completed, paused, resumed, updated)
 6. Subscriptions with UPI AutoPay / card mandates may need to be enabled for your account. Ask

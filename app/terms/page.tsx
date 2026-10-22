@@ -4,7 +4,7 @@ import { SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
     title: 'Terms of Service',
-    description: 'Terms of service for using MyOnlinePDF online PDF tools and the Premium subscription.',
+    description: 'Terms of service for using PDFAdore online PDF tools and the Premium subscription.',
     alternates: {
         canonical: '/terms',
     },

@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { ALL_TOOLS } from '@/lib/tools';
 
-const BASE_URL = 'https://myonlinepdf.com';
+const BASE_URL = 'https://www.pdfadore.com';
 // Bump when page content changes meaningfully; a per-request date tells crawlers everything changes daily.
 const LAST_UPDATED = new Date('2026-10-21');
 

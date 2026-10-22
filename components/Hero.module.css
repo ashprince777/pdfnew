@@ -1,12 +1,19 @@
 .hero {
-    padding: 80px 0 60px;
+    padding: 80px 0 64px;
     background-color: var(--card-bg);
-    /* Or a subtle gradient */
+    /* Soft glow in the logo colours. */
+    background-image:
+        radial-gradient(60% 80% at 15% 0%, rgba(109, 40, 217, 0.10) 0%, transparent 70%),
+        radial-gradient(50% 70% at 90% 10%, rgba(244, 63, 94, 0.10) 0%, transparent 70%);
 }
 
 .title {
     font-size: 3.5rem;
-    font-weight: 800;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 24px;
     line-height: 1.2;
 }

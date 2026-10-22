@@ -95,7 +95,7 @@ export function LoginForm() {
         <div className={styles.page}>
             <div className={styles.card}>
                 <h1 className={styles.title}>Log in</h1>
-                <p className={styles.subtitle}>Welcome back to MyOnlinePDF</p>
+                <p className={styles.subtitle}>Welcome back to PDFAdore</p>
                 <GoogleButton next={next} />
                 <div className={styles.divider}>or</div>
                 <form className={styles.form} onSubmit={submit}>

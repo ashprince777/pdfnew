@@ -19,7 +19,7 @@ const faqItems = [
     },
     {
         question: 'Is it safe to merge PDF files online?',
-        answer: 'Yes, absolutely. MyOnlinePDF processes your files directly in your web browser. They are not uploaded to our servers, ensuring complete privacy.'
+        answer: 'Yes, absolutely. PDFAdore processes your files directly in your web browser. They are not uploaded to our servers, ensuring complete privacy.'
     },
     {
         question: 'Is this PDF merger free?',
@@ -53,7 +53,7 @@ export default function MergePdfPage() {
                 <div className="prose max-w-4xl mx-auto py-12">
                     <h2 className="text-3xl font-bold mb-6">The Best Free Online PDF Merger</h2>
                     <p className="text-lg text-gray-700 mb-6">
-                        Looking for a simple way to combine multiple PDF files into one? MyOnlinePDF offers a fast, reliable, and secure solution.
+                        Looking for a simple way to combine multiple PDF files into one? PDFAdore offers a fast, reliable, and secure solution.
                         Whether you need to merge invoices for accounting, combine chapters for a thesis, or collate diverse documents into a single report,
                         our tool makes it effortless.
                     </p>
@@ -69,7 +69,7 @@ export default function MergePdfPage() {
                         <li><strong>Archives:</strong> Reduce file clutter by grouping related documents together.</li>
                     </ul>
 
-                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">Why Choose MyOnlinePDF?</h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">Why Choose PDFAdore?</h2>
                     <div className="grid md:grid-cols-2 gap-6 mb-10">
                         <div className="bg-gray-50 p-6 rounded-lg">
                             <h3 className="text-xl font-bold mb-2">100% Secure & Private</h3>
