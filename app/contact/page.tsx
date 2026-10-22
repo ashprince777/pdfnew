@@ -30,10 +30,10 @@ export default function ContactPage() {
                 </p>
 
                 <div className="bg-white p-8 rounded-xl shadow-sm border text-center mb-8">
-                    <Mail className="mx-auto mb-4 text-red-500" size={48} />
+                    <Mail className="mx-auto mb-4" size={48} style={{ color: 'var(--primary)' }} />
                     <h2 className="text-xl font-semibold mb-2">Email Support</h2>
                     <p className="text-gray-600 mb-4">For general inquiries and support requests.</p>
-                    <a href={`mailto:${SITE.supportEmail}`} className="text-red-600 font-medium hover:underline text-lg">
+                    <a href={`mailto:${SITE.supportEmail}`} className="font-medium hover:underline text-lg" style={{ color: 'var(--primary)' }}>
                         {SITE.supportEmail}
                     </a>
                 </div>
@@ -43,9 +43,27 @@ export default function ContactPage() {
                     <ContactForm supportEmail={SITE.supportEmail} />
                 </div>
 
-                <p className="text-sm text-muted text-center mt-8">
-                    {SITE.legalName}, {SITE.address}
-                </p>
+                <div className="bg-white p-8 rounded-xl shadow-sm border mt-8">
+                    <h2 className="text-xl font-semibold mb-4">Business details</h2>
+                    <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '10px 16px', fontSize: '0.95rem' }}>
+                        <dt className="text-muted">Operated by</dt>
+                        <dd>{SITE.legalName}</dd>
+                        <dt className="text-muted">Address</dt>
+                        <dd>{SITE.address}</dd>
+                        <dt className="text-muted">Phone</dt>
+                        <dd>
+                            <a href={`tel:${SITE.phone.replace(/\s+/g, '')}`} className="hover:underline" style={{ color: 'var(--primary)' }}>{SITE.phone}</a>
+                        </dd>
+                        <dt className="text-muted">Email</dt>
+                        <dd>
+                            <a href={`mailto:${SITE.supportEmail}`} className="hover:underline" style={{ color: 'var(--primary)' }}>{SITE.supportEmail}</a>
+                        </dd>
+                        <dt className="text-muted">Grievance officer</dt>
+                        <dd>Grievance Officer, {SITE.legalName} ({SITE.supportEmail})</dd>
+                        <dt className="text-muted">Support hours</dt>
+                        <dd>Monday to Saturday, 10:00 to 18:00 IST. We reply to emails within 1 working day.</dd>
+                    </dl>
+                </div>
             </div>
         </div>
     );

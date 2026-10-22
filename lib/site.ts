@@ -8,10 +8,12 @@ export const SITE = {
     url: 'https://www.pdfadore.com',
     supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@pdfadore.com',
     /** Legal name of the business or individual operating the site. */
-    legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || 'PDFAdore',
+    legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || 'Foxora Digital LLP',
     /** Registered/communication address. */
-    address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || 'India',
+    address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || 'Kozhikode (Calicut), Kerala, India',
+    /** Customer support phone, shown with the country code. */
+    phone: process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+91 98097 25430',
     /** Courts with jurisdiction over disputes. */
-    jurisdiction: process.env.NEXT_PUBLIC_JURISDICTION || 'India',
-    policiesUpdated: 'October 21, 2026',
+    jurisdiction: process.env.NEXT_PUBLIC_JURISDICTION || 'Kozhikode, Kerala',
+    policiesUpdated: 'October 22, 2026',
 };

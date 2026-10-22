@@ -53,7 +53,7 @@ export default function RefundPolicyPage() {
 
             <h2>5. Contact</h2>
             <p>
-                {SITE.legalName}, {SITE.address}. Email: <a href={`mailto:${SITE.supportEmail}`} style={{ textDecoration: 'underline' }}>{SITE.supportEmail}</a>
+                {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: <a href={`mailto:${SITE.supportEmail}`} style={{ textDecoration: 'underline' }}>{SITE.supportEmail}</a>
             </p>
         </div>
     );

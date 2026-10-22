@@ -63,7 +63,7 @@ export default function TermsPage() {
 
             <h2>8. Contact</h2>
             <p>
-                {SITE.legalName}, {SITE.address}. Email: <a href={`mailto:${SITE.supportEmail}`} style={link}>{SITE.supportEmail}</a>
+                {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: <a href={`mailto:${SITE.supportEmail}`} style={link}>{SITE.supportEmail}</a>
             </p>
         </div>
     );

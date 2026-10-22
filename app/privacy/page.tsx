@@ -148,7 +148,7 @@ export default function PrivacyPage() {
 
             <h2 className="mt-4">15. Contact and grievance officer</h2>
             <p>
-                For privacy questions, requests or complaints, contact our grievance officer: {SITE.legalName}, {SITE.address}. Email: {email}.
+                For privacy questions, requests or complaints, contact our Grievance Officer: {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: {email}.
             </p>
         </div>
     );
