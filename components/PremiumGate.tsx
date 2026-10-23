@@ -16,7 +16,7 @@ export function PremiumBadge() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 3,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 padding: '1px 7px',
                 borderRadius: 'var(--radius-full)',

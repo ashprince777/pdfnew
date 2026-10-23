@@ -5,8 +5,8 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'PDF to PDF/A Converter Online Free - ISO Archival Standard',
-    description: 'Convert PDF files to ISO standardized PDF/A-1b and PDF/A-2b format for long term archiving. Free, secure, and processed in your browser.',
+    title: 'PDF to PDF/A Converter Online - ISO Archival Standard',
+    description: 'Convert PDF files to ISO standardized PDF/A-1b and PDF/A-2b format for long-term archiving. Private and processed in your browser. Included with PDFAdore Premium.',
     alternates: {
         canonical: '/pdf-to-pdfa',
     },
@@ -51,6 +51,7 @@ export default function PdfToPdfaPage() {
                 toolName="PDF to PDF/A"
                 actionName="Convert"
                 actionDescription="convert your PDF files into archival PDF/A standard"
+                premium
                 benefits={benefits}
                 faqItems={faqItems}
             />

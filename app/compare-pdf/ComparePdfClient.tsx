@@ -190,9 +190,9 @@ export default function ComparePdfClient() {
     const current = pages.find((p) => p.pageNum === selectedPage);
     const totals = pages.reduce((t, p) => ({ added: t.added + p.added, removed: t.removed + p.removed }), { added: 0, removed: 0 });
 
-    const slot = (label: string, file: File | null, setFile: (f: File | null) => void) => (
+    const slot = (label: string, buttonLabel: string, file: File | null, setFile: (f: File | null) => void) => (
         <OptionsCard title={label}>
-            {file ? <SelectedFile file={file} onRemove={() => setFile(null)} icon={FileText} /> : <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" variant="compact" />}
+            {file ? <SelectedFile file={file} onRemove={() => setFile(null)} icon={FileText} /> : <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" variant="compact" buttonLabel={buttonLabel} />}
         </OptionsCard>
     );
 
@@ -203,8 +203,8 @@ export default function ComparePdfClient() {
             {status === 'IDLE' && (
                 <ToolWorkspace wide>
                     <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))' }}>
-                        {slot('Original PDF', file1, setFile1)}
-                        {slot('Modified PDF', file2, setFile2)}
+                        {slot('Original PDF', 'Choose original PDF', file1, setFile1)}
+                        {slot('Modified PDF', 'Choose modified PDF', file2, setFile2)}
                     </div>
                     <div style={{ maxWidth: 480, width: '100%', margin: '0 auto' }}>
                         <PrimaryAction onClick={runComparison} disabled={!file1 || !file2}>

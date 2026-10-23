@@ -137,6 +137,34 @@
     color: var(--primary);
 }
 
+/* Never wrap labels like "All 31 Tools" or "Log in" onto two lines. */
+.desktopMenu a,
+.desktopMenu button {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Narrow laptops: tighten spacing before switching to the mobile menu. */
+@media (max-width: 1120px) {
+    .desktopMenu {
+        gap: 6px;
+    }
+
+    .navLink {
+        padding: 8px 8px;
+    }
+
+    .searchKbd {
+        display: none;
+    }
+}
+
+@media (max-width: 960px) {
+    .navLink svg {
+        display: none;
+    }
+}
+
 @media (max-width: 860px) {
     .desktopMenu {
         display: none;
@@ -145,4 +173,4 @@
     .mobileControls {
         display: flex;
     }
-}
+}

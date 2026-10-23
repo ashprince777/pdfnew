@@ -46,6 +46,8 @@ export interface ToolItem {
     icon: LucideIcon;
     color: string;
     category: ToolCategory;
+    /** Shown on the tool card so people know before uploading: Premium-only, or needs a free account. */
+    access?: 'premium' | 'account';
 }
 
 export const CATEGORIES: { id: ToolCategory; label: string; color: string }[] = [
@@ -210,6 +212,7 @@ export const ALL_TOOLS: ToolItem[] = [
         icon: Archive,
         color: 'var(--cat-from-pdf)',
         category: 'from_pdf',
+        access: 'premium',
     },
 
     // Edit PDF (Purple)
@@ -312,6 +315,7 @@ export const ALL_TOOLS: ToolItem[] = [
         icon: Sparkles,
         color: 'var(--cat-ai)',
         category: 'ai',
+        access: 'account',
     },
     {
         title: 'Chat with PDF',
@@ -320,6 +324,7 @@ export const ALL_TOOLS: ToolItem[] = [
         icon: MessagesSquare,
         color: 'var(--cat-ai)',
         category: 'ai',
+        access: 'account',
     },
     {
         title: 'Translate PDF',
@@ -328,5 +333,6 @@ export const ALL_TOOLS: ToolItem[] = [
         icon: Languages,
         color: 'var(--cat-ai)',
         category: 'ai',
+        access: 'account',
     },
 ];

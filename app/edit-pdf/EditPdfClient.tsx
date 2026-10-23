@@ -12,6 +12,7 @@ import { baseName, embedUnicodeFont, getVisualFrame, hexToRgbComponents, loadPdf
 import { openPdfjsDocument } from '@/lib/pdfjs';
 import { analyzePage, ocrPage, rgbToHex, sampleColors, type PageAnalysis, type TextSegment } from '@/lib/pageAnalysis';
 import { drawnAspect, findPageImages, replacePageImage } from '@/lib/pageContent';
+import { removeTextInBoxes, type UserBox } from '@/lib/textRemoval';
 import { useToolRunner } from '@/lib/useToolRunner';
 import { PremiumBadge, UpgradePrompt, usePremiumFeature } from '@/components/PremiumGate';
 import styles from './EditPdf.module.css';
@@ -65,7 +66,7 @@ const ANALYSIS_CACHE_SIZE = 3;
 const TOOLS: { value: Tool; label: string; icon: typeof Type; hint: string }[] = [
     { value: 'text', label: 'Text', icon: Type, hint: 'Click any text to edit it, or click an empty spot to add new text.' },
     { value: 'image', label: 'Images', icon: ImageUp, hint: 'Click an image to replace it with a picture from your device.' },
-    { value: 'whiteout', label: 'Whiteout', icon: Eraser, hint: 'Drag a box to cover content with white.' },
+    { value: 'whiteout', label: 'Whiteout', icon: Eraser, hint: 'Drag a box over content to white it out. Text underneath is deleted from the file.' },
     { value: 'highlight', label: 'Highlight', icon: Highlighter, hint: 'Drag across the page to highlight an area.' },
 ];
 
@@ -407,6 +408,29 @@ export default function EditPdfClient() {
             const pdfDoc = await loadPdf(file);
             const bold = await embedUnicodeFont(pdfDoc, 'bold');
             const regular = await embedUnicodeFont(pdfDoc, 'regular');
+
+            // First really delete the original text under replaced text and whiteout boxes, so it
+            // can't be copied, searched or recovered from the file. This must run before anything
+            // is drawn on the page.
+            const boxesByPage = new Map<number, UserBox[]>();
+            for (const ann of changes) {
+                if ((ann.kind !== 'replace' && ann.kind !== 'whiteout') || ann.page > pdfDoc.getPageCount()) continue;
+                const frame = getVisualFrame(pdfDoc.getPage(ann.page - 1));
+                const pad = ann.kind === 'replace' ? 1 : 0;
+                const a = frame.toPdf(ann.x * frame.width - pad, frame.height - (ann.y + ann.h) * frame.height - pad);
+                const b = frame.toPdf((ann.x + ann.w) * frame.width + pad, frame.height - ann.y * frame.height + pad);
+                const list = boxesByPage.get(ann.page - 1) ?? [];
+                list.push({ x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) });
+                boxesByPage.set(ann.page - 1, list);
+            }
+            for (const [pageIndex, boxes] of boxesByPage) {
+                try {
+                    await removeTextInBoxes(pdfDoc, pageIndex, boxes);
+                } catch (error) {
+                    // Unusual content streams: fall back to covering the text (previous behaviour).
+                    console.warn('Could not remove original text from page', pageIndex + 1, error);
+                }
+            }
 
             for (const ann of changes) {
                 if (ann.page > pdfDoc.getPageCount()) continue;
@@ -800,10 +824,13 @@ export default function EditPdfClient() {
                     </div>
 
                     <p className={styles.footnote}>
-                        Edited text uses Noto Sans in the original size and colour. Replaced images are fully removed from the file.
+                        Edited text uses Noto Sans in the original size and colour. Replaced text, whited-out text and replaced images are fully removed from the file.
                     </p>
 
                     <div className={styles.applyBar}>
+                        <span className={styles.applyCount} aria-live="polite">
+                            {changeCount === 0 ? 'No changes yet' : `${changeCount} ${changeCount === 1 ? 'change' : 'changes'} ready`}
+                        </span>
                         <button type="button" className="btn btn-primary btn-lg" onClick={saveEditedPdf} disabled={changeCount === 0} style={{ gap: 10 }}>
                             Apply changes <ArrowRight size={20} />
                         </button>

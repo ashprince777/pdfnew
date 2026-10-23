@@ -80,7 +80,7 @@ export default function Footer() {
                 <div className={styles.bottom}>
                     <p style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                         <ShieldCheck size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
-                        Every PDF tool runs in your browser. Your files are never uploaded.
+                        Every core PDF tool runs in your browser. Your files are never uploaded.
                     </p>
                     <p>{`© ${new Date().getFullYear()} ${SITE.name}, a ${SITE.legalName} brand. All rights reserved.`}</p>
                 </div>

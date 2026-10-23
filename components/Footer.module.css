@@ -39,12 +39,13 @@
 .links {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 2px;
 }
 
 .links h4 {
     font-weight: 800;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     text-transform: uppercase;
     font-size: 0.85rem;
     letter-spacing: 0.5px;
@@ -56,6 +57,11 @@
     font-size: 0.9rem;
     text-decoration: none;
     transition: color 0.2s;
+    /* Comfortable tap targets on phones (at least ~36px tall). */
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 4px 0;
 }
 
 .links a:hover {
@@ -160,4 +166,4 @@
         flex-direction: row;
         flex-wrap: wrap;
     }
-}
+}

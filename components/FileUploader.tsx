@@ -22,6 +22,8 @@ interface FileUploaderProps {
     toolName?: string;
     /** "compact" renders a single "Add more files" button for adding to an existing selection. */
     variant?: 'default' | 'compact';
+    /** Custom text for the compact button (e.g. "Choose original PDF"). */
+    buttonLabel?: string;
 }
 
 function describeAccept(accept: string, multiple: boolean): string {
@@ -44,6 +46,7 @@ export default function FileUploader({
     currentCount = 0,
     toolName,
     variant = 'default',
+    buttonLabel,
 }: FileUploaderProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -144,7 +147,7 @@ export default function FileUploader({
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <button type="button" className="btn btn-outline" onClick={triggerFilePicker} style={{ gap: 8 }}>
-                    <Plus size={18} aria-hidden="true" /> Add more {describeAccept(accept, true).replace(/(Files|Images|Documents)/, (w) => w.toLowerCase())}
+                    <Plus size={18} aria-hidden="true" /> {buttonLabel ?? `Add more ${describeAccept(accept, true).replace(/\b(Files|Images|Documents)\b/, (w) => w.toLowerCase())}`}
                 </button>
                 {errorMessage && (
                     <p role="alert" style={{ color: 'var(--error)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>

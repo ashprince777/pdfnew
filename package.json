@@ -12,6 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:billing": "node --conditions=react-server --test scripts/test-billing.ts",
+    "test:text-removal": "node --experimental-strip-types tests/text-removal.test.mts",
     "test:e2e": "node tests/run.mjs",
     "test": "npm run test:billing && npm run test:e2e"
   },

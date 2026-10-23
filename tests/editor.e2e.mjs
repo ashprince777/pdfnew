@@ -62,7 +62,69 @@ await run('edit existing text', async (p) => {
     fs.writeFileSync(`${OUTPUT}/edited-text.pdf`, bytes);
     const text = await textOf(bytes);
     if (!text.includes('Dr. Ashwin Prakash')) throw new Error('new text missing: ' + text.slice(0, 200));
-    return 'replacement text written; screenshot editor-inline.png';
+    // The old text must be gone from the file, not just painted over.
+    if (text.includes('Dr. Name 3')) throw new Error('original text still in the file: ' + text.slice(0, 200));
+    if (!text.includes('Cardiology')) throw new Error('other text on the page was removed: ' + text.slice(0, 200));
+    return 'replacement text written, original text removed; screenshot editor-inline.png';
+});
+
+await run('edit text twice (embedded font)', async (p) => {
+    // The first edit writes the new text with the embedded Noto Sans (a Type0/CID font); editing that
+    // text again checks that text in embedded fonts is removed too.
+    const once = `${OUTPUT}/edited-once.pdf`;
+    await p.goto(`${BASE}/edit-pdf`, { waitUntil: 'networkidle' });
+    await p.locator('input[type=file]').first().setInputFiles(`${FIXTURES}/doctors.pdf`);
+    let seg = p.getByRole('button', { name: 'Edit text: Dr. Name 5 & Co <test>' });
+    await seg.waitFor({ timeout: 60000 });
+    await seg.click();
+    let input = p.getByLabel('Edit text', { exact: true });
+    await input.fill('Dr. Meera Nair');
+    await input.press('Enter');
+    await p.getByRole('button', { name: /Apply changes/ }).click();
+    fs.writeFileSync(once, await grab(p));
+
+    await p.goto(`${BASE}/edit-pdf`, { waitUntil: 'networkidle' });
+    await p.locator('input[type=file]').first().setInputFiles(once);
+    seg = p.getByRole('button', { name: 'Edit text: Dr. Meera Nair' });
+    await seg.waitFor({ timeout: 60000 });
+    await seg.click();
+    input = p.getByLabel('Edit text', { exact: true });
+    await input.fill('Dr. Arjun Menon');
+    await input.press('Enter');
+    await p.getByRole('button', { name: /Apply changes/ }).click();
+    const text = await textOf(await grab(p));
+    if (!text.includes('Dr. Arjun Menon')) throw new Error('new text missing: ' + text.slice(0, 200));
+    if (text.includes('Meera')) throw new Error('text in the embedded font was not removed: ' + text.slice(0, 300));
+    if (text.includes('Dr. Name 5')) throw new Error('original text came back');
+    return 'text written in the embedded font removed on the second edit';
+});
+
+await run('whiteout removes text', async (p) => {
+    await p.goto(`${BASE}/edit-pdf`, { waitUntil: 'networkidle' });
+    await p.locator('input[type=file]').first().setInputFiles(`${FIXTURES}/doctors.pdf`);
+    const seg = p.getByRole('button', { name: 'Edit text: Dr. Name 3 & Co <test>' });
+    await seg.waitFor({ timeout: 60000 });
+    // Remember where the text sits relative to the page overlay: switching tools changes the hint
+    // text above the preview, which moves the page.
+    const overlay = seg.locator('xpath=..');
+    await overlay.evaluate((el) => el.setAttribute('data-qa', 'overlay'));
+    const before = await overlay.boundingBox();
+    const box = await seg.boundingBox();
+    const rel = { x: box.x - before.x, y: box.y - before.y };
+    await p.getByRole('button', { name: 'Whiteout' }).click();
+    const after = await p.locator('[data-qa=overlay]').boundingBox();
+    const x0 = after.x + rel.x;
+    const y0 = after.y + rel.y;
+    // Drag a whiteout box over the segment.
+    await p.mouse.move(x0 - 4, y0 - 3);
+    await p.mouse.down();
+    await p.mouse.move(x0 + box.width + 4, y0 + box.height + 3, { steps: 6 });
+    await p.mouse.up();
+    await p.getByRole('button', { name: /Apply changes/ }).click();
+    const text = await textOf(await grab(p));
+    if (text.includes('Dr. Name 3')) throw new Error('whited-out text still in the file: ' + text.slice(0, 200));
+    if (!text.includes('Cardiology')) throw new Error('text outside the whiteout was removed: ' + text.slice(0, 200));
+    return 'text under the whiteout box removed, rest kept';
 });
 
 /** Builds an image-only ("scanned") copy of doctors.pdf using the app's PDF to JPG tool. */
