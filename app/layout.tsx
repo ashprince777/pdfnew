@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CookieConsent from '@/components/CookieConsent';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
+import { Analytics } from '@vercel/analytics/next';
 import { ToastProvider } from '@/components/ToastProvider';
 import { PlanProvider } from '@/components/PlanProvider';
 import { SITE } from '@/lib/site';
@@ -77,6 +78,8 @@ export default function RootLayout({
             <Footer />
             <CookieConsent />
             <GoogleAnalytics />
+            {/* Vercel Web Analytics: cookieless, aggregate page views (no consent needed). */}
+            <Analytics />
           </PlanProvider>
         </ToastProvider>
       </body>

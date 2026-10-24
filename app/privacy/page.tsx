@@ -102,7 +102,7 @@ export default function PrivacyPage() {
             <ul style={{ paddingLeft: 22, display: 'grid', gap: 6 }}>
                 <li><strong>Supabase</strong>: authentication and database (account, plan and payment records).</li>
                 <li><strong>Razorpay</strong>: payment processing for Premium subscriptions.</li>
-                <li><strong>Vercel</strong>: website hosting.</li>
+                <li><strong>Vercel</strong>: website hosting and cookieless page-view statistics.</li>
                 <li><strong>Groq</strong>: AI processing, only for the AI tools you choose to use.</li>
                 <li><strong>Google</strong>: Google Sign-In if you choose it, and Google Analytics only with your consent.</li>
             </ul>
@@ -111,7 +111,9 @@ export default function PrivacyPage() {
             <h2 className="mt-4">8. Cookies, analytics and local storage</h2>
             <p>
                 If you log in, a strictly necessary cookie keeps you signed in. With your consent only, we load Google Analytics to understand
-                aggregate traffic (pages visited, device type). You can change your choice at any time in the cookie banner. We also store a few
+                aggregate traffic (pages visited, device type). You can change your choice at any time in the cookie banner. We also use Vercel
+                Web Analytics, which counts page views without cookies and without identifying you (it stores no personal data on your device).
+                We also store a few
                 preferences in your browser&apos;s local storage (theme, recently used tools, cookie choice and your AI notice confirmation). This data
                 stays on your device.
             </p>
