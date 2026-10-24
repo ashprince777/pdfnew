@@ -25,11 +25,13 @@ const BILLING_VARS = [
     'GROQ_BASE_URL',
     'GROQ_MODEL',
     'AI_MAX_TEXT_CHARS',
+    'ADMIN_EMAILS',
 ];
 const blank = Object.fromEntries(BILLING_VARS.map((k) => [k, '']));
 
 const FAKE_SUPABASE = 'http://127.0.0.1:54321';
 const billingEnv = {
+    ADMIN_EMAILS: 'premium@example.com',
     NEXT_PUBLIC_SUPABASE_URL: FAKE_SUPABASE,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
     NEXT_PUBLIC_RAZORPAY_KEY_ID: 'rzp_test_fake',

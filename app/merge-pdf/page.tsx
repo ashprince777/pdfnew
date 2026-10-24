@@ -5,8 +5,8 @@ import FaqSchema from '@/components/FaqSchema';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-    title: 'Merge PDF Online - Combine PDF Files for Free',
-    description: 'Merge multiple PDF files into one document online. Fast, secure, and completely free. No software installation required.',
+    title: 'Merge PDF Online Free - Combine PDF Files into One',
+    description: 'Merge PDF files into one document for free. Drag to set the order, works on mobile, and your files are never uploaded. No sign-up needed.',
     alternates: {
         canonical: '/merge-pdf',
     },

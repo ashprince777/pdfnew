@@ -1,4 +1,5 @@
 "use client";
+import { trackEvent } from '@/lib/analytics';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -68,6 +69,7 @@ export default function PricingClient({ initialInterval, autoCheckout }: { initi
         try {
             const done = await startPremiumCheckout(chosen);
             if (done) {
+                trackEvent(done.trialEndsAt ? 'trial_started' : 'subscribed', { plan: chosen });
                 await refresh();
                 showToast(
                     done.trialEndsAt

@@ -316,6 +316,23 @@ await check('ai: premium user chats with a PDF after confirming the privacy noti
     await page.context().close();
 });
 
+await check('admin dashboard: admin sees numbers, others get 404', async () => {
+    const page = await pageAs('premium-token');
+    const res = await page.goto(`${APP}/admin`, { waitUntil: 'networkidle' });
+    assert(res.status() === 200, `admin got ${res.status()}`);
+    await page.getByRole('heading', { name: 'Dashboard' }).waitFor({ timeout: 10000 });
+    for (const label of ['Total accounts', 'Paying Premium', 'In free trial', 'Revenue, last 30 days', 'Latest sign-ups']) {
+        assert(await page.getByText(label).first().isVisible(), `missing ${label}`);
+    }
+    await page.screenshot({ path: `${OUTPUT}/admin-dashboard.png`, fullPage: true });
+    assert(!page.errors.length, page.errors.join(' | '));
+    await page.context().close();
+    const other = await pageAs('free-token');
+    const denied = await other.goto(`${APP}/admin`);
+    assert(denied.status() === 404, `non-admin got ${denied.status()}`);
+    await other.context().close();
+});
+
 await browser.close();
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);

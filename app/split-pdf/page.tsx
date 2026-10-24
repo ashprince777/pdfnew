@@ -5,8 +5,8 @@ import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 
 export const metadata: Metadata = {
-    title: 'Split PDF Online - Extract Pages from PDF Free',
-    description: 'Split PDF files online. Extract specific pages or save every page as a separate document. Fast, private, and free.',
+    title: 'Split PDF Pages Online Free - Extract Pages from PDF',
+    description: 'Split PDF pages online for free: extract the pages you need, or save every page as a separate PDF. Fast, private and works on mobile.',
     alternates: {
         canonical: '/split-pdf',
     },

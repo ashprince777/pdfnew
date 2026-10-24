@@ -143,6 +143,48 @@ async function makeScannedFixture() {
     fs.writeFileSync(target, await doc.save());
 }
 
+/** The first image on page 1 of a PDF, as raw JPEG bytes (the scanned fixture is a single JPEG page). */
+async function firstImageJpeg(bytes) {
+    const doc = await PDFDocument.load(bytes);
+    const xobjects = doc.getPage(0).node.Resources().lookup(PDFName.of('XObject'));
+    for (const [, ref] of xobjects.entries()) {
+        const obj = doc.context.lookup(ref);
+        if (obj.dict.get(PDFName.of('Subtype')) === PDFName.of('Image')) return obj.contents;
+    }
+    throw new Error('no image on page 1');
+}
+
+/** Darkest and average brightness (0-255) inside a box given as fractions of the image, sampled in the browser. */
+async function regionBrightness(p, jpeg, box) {
+    return p.evaluate(async ({ b64, box }) => {
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+        const c = document.createElement('canvas');
+        c.width = bmp.width;
+        c.height = bmp.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(bmp, 0, 0);
+        // Sample the inner 70% of the box to stay clear of JPEG edge noise.
+        const x = Math.round((box.x + box.w * 0.15) * c.width), y = Math.round((box.y + box.h * 0.15) * c.height);
+        const w = Math.max(1, Math.round(box.w * 0.7 * c.width)), h = Math.max(1, Math.round(box.h * 0.7 * c.height));
+        const d = ctx.getImageData(x, y, w, h).data;
+        let min = 255, sum = 0;
+        for (let i = 0; i < d.length; i += 4) {
+            const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+            min = Math.min(min, v);
+            sum += v;
+        }
+        return { min: Math.round(min), avg: Math.round(sum / (d.length / 4)) };
+    }, { b64: Buffer.from(jpeg).toString('base64'), box });
+}
+
+/** Box of an element as fractions of the page overlay it sits on. */
+async function boxFraction(seg) {
+    const overlay = await seg.locator('xpath=..').boundingBox();
+    const r = await seg.boundingBox();
+    return { x: (r.x - overlay.x) / overlay.width, y: (r.y - overlay.y) / overlay.height, w: r.width / overlay.width, h: r.height / overlay.height };
+}
+
 await run('ocr scanned page', async (p) => {
     await makeScannedFixture();
     await p.goto(`${BASE}/edit-pdf`, { waitUntil: 'networkidle' });
@@ -152,6 +194,7 @@ await run('ocr scanned page', async (p) => {
     await seg.waitFor({ timeout: 180000 });
     const count = await p.getByRole('button', { name: /^Edit text: / }).count();
     const label = await seg.getAttribute('aria-label');
+    const area = await boxFraction(seg);
     await seg.click();
     const input = p.getByLabel('Edit text', { exact: true });
     await input.fill('Neurology Department');
@@ -161,7 +204,38 @@ await run('ocr scanned page', async (p) => {
     fs.writeFileSync(`${OUTPUT}/edited-scan.pdf`, bytes);
     const text = await textOf(bytes);
     if (!text.includes('Neurology Department')) throw new Error('new text missing');
-    return `${count} OCR segments; edited "${label.replace('Edit text: ', '')}"`;
+    const before = await regionBrightness(p, await firstImageJpeg(fs.readFileSync(`${FIXTURES}/doctors-scan.pdf`)), area);
+    const after = await regionBrightness(p, await firstImageJpeg(bytes), area);
+    if (before.min > 120) throw new Error(`fixture has no dark text in the edited area (min ${before.min})`);
+    if (after.min < 200) throw new Error(`old words still visible in the scanned image (min brightness ${after.min})`);
+    return `${count} OCR segments; edited "${label.replace('Edit text: ', '')}"; old words erased from the scan (darkest ${before.min} -> ${after.min})`;
+});
+
+await run('whiteout on scanned page', async (p) => {
+    await makeScannedFixture();
+    await p.goto(`${BASE}/edit-pdf`, { waitUntil: 'networkidle' });
+    await p.locator('input[type=file]').first().setInputFiles(`${FIXTURES}/doctors-scan.pdf`);
+    // OCR only to find where some words are; the test then covers them with a Whiteout box.
+    await p.getByRole('button', { name: 'Detect text with OCR' }).click();
+    const seg = p.getByRole('button', { name: /Edit text: .*Cardiology/ }).first();
+    await seg.waitFor({ timeout: 180000 });
+    const area = await boxFraction(seg);
+    const overlay = seg.locator('xpath=..');
+    await overlay.evaluate((el) => el.setAttribute('data-qa', 'overlay'));
+    await p.getByRole('button', { name: 'Whiteout' }).click();
+    const o = await p.locator('[data-qa=overlay]').boundingBox();
+    const x0 = o.x + area.x * o.width, y0 = o.y + area.y * o.height;
+    await p.mouse.move(x0 - 4, y0 - 3);
+    await p.mouse.down();
+    await p.mouse.move(x0 + area.w * o.width + 4, y0 + area.h * o.height + 3, { steps: 6 });
+    await p.mouse.up();
+    await p.getByRole('button', { name: /Apply changes/ }).click();
+    const bytes = await grab(p);
+    const before = await regionBrightness(p, await firstImageJpeg(fs.readFileSync(`${FIXTURES}/doctors-scan.pdf`)), area);
+    const after = await regionBrightness(p, await firstImageJpeg(bytes), area);
+    if (before.min > 120) throw new Error(`fixture has no dark text in the area (min ${before.min})`);
+    if (after.min < 200) throw new Error(`words still in the scanned image under the whiteout (min brightness ${after.min})`);
+    return `scan pixels under the whiteout are white (darkest ${before.min} -> ${after.min})`;
 });
 
 await run('replace image', async (p) => {

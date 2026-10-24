@@ -1,4 +1,5 @@
 "use client";
+import { trackEvent } from '@/lib/analytics';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -195,6 +196,7 @@ export default function AiPdfTool({ task }: { task: AiTask }) {
                 setAnswer('');
             }
             if (used !== null) setCredits((c) => (c ? { ...c, used } : c));
+            trackEvent('ai_used', { task });
         } catch (error) {
             const err = error as Error & { code?: string };
             if (err.code === 'NO_CREDITS') setNoCredits(err.message);

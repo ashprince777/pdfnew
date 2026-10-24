@@ -1,0 +1,163 @@
+.page {
+    padding: 56px 20px 72px;
+}
+
+.header {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 36px;
+}
+
+.title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.subtitle {
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
+.grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+
+.card {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    padding: 22px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-focus);
+}
+
+.cardTitle {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.cardText {
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.meta {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.article {
+    max-width: 780px;
+    padding: 48px 20px 72px;
+}
+
+.breadcrumb a {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.articleTitle {
+    font-size: 2.2rem;
+    line-height: 1.25;
+    font-weight: 700;
+    margin: 10px 0 8px;
+}
+
+.body {
+    display: grid;
+    gap: 16px;
+    margin-top: 28px;
+    font-size: 1.05rem;
+    line-height: 1.75;
+}
+
+.body h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 18px;
+}
+
+.body h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.body ul,
+.body ol {
+    padding-left: 24px;
+    display: grid;
+    gap: 6px;
+}
+
+.body ul {
+    list-style: disc;
+}
+
+.body ol {
+    list-style: decimal;
+}
+
+.tip {
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-subtle);
+    border-left: 4px solid var(--primary);
+}
+
+.cta {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    padding: 20px;
+    border-radius: var(--radius);
+    background: var(--section-alt);
+    border: 1px solid var(--border-color);
+}
+
+.tableWrap {
+    overflow-x: auto;
+}
+
+.tableWrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.tableWrap th,
+.tableWrap td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.tableWrap th {
+    background: var(--section-alt);
+    font-weight: 600;
+}
+
+.related {
+    margin-top: 56px;
+    display: grid;
+    gap: 16px;
+}
+
+.related h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+}

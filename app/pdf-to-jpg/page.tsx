@@ -5,8 +5,8 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToJpgClient from './PdfToJpgClient';
 
 export const metadata: Metadata = {
-    title: 'PDF to JPG Converter - Convert PDF Pages to Images',
-    description: 'Convert PDF pages to high-quality JPG images. Extract every page as a separate image file instantly.',
+    title: 'PDF to JPG - Convert PDF to Image Online Free',
+    description: 'Convert PDF to JPG or PNG images online for free. Every page becomes a high-quality image, ready to share on WhatsApp or upload to forms. No upload, no sign-up.',
     alternates: {
         canonical: '/pdf-to-jpg',
     },

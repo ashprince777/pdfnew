@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage, PdfToolError } from './pdf';
+import { trackEvent } from './analytics';
 
 export type ToolStatus = 'IDLE' | 'PROCESSING' | 'DONE';
 
@@ -54,6 +55,8 @@ export function useToolRunner() {
                 urlRef.current = url;
                 setResult({ url, filename: output.filename, size: output.blob.size });
                 setStatus('DONE');
+                // Which tools are used most (the page path only; nothing about the file).
+                trackEvent('tool_used', { tool: window.location.pathname });
             } catch (error) {
                 // Expected user-facing problems (wrong password, bad range...) are not bugs.
                 if (error instanceof PdfToolError) console.warn(error.message);

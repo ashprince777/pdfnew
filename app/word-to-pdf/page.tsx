@@ -5,8 +5,8 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import WordToPdfClient from './WordToPdfClient';
 
 export const metadata: Metadata = {
-    title: 'Word to PDF Converter - Convert Docx to PDF Online',
-    description: 'Convert Microsoft Word documents to PDF format online. Create professional, non-editable documents for sharing and printing.',
+    title: 'Word to PDF Converter Online Free - DOCX to PDF',
+    description: 'Convert Word (DOCX) to PDF for free with proper page breaks and fonts, including Indian-language text. No sign-up; your document never leaves your device.',
     alternates: {
         canonical: '/word-to-pdf',
     },

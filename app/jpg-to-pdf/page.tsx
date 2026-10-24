@@ -5,8 +5,8 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import JpgToPdfClient from './JpgToPdfClient';
 
 export const metadata: Metadata = {
-    title: 'JPG to PDF Converter - Convert Images to PDF',
-    description: 'Convert JPG, PNG, and other images to PDF format. Combine multiple photos into a single PDF document.',
+    title: 'JPG to PDF Converter - Image & Photo to PDF Online Free',
+    description: 'Convert JPG, PNG and phone photos to PDF for free. Combine many images into one PDF in any order. Works on mobile; your photos never leave your device.',
     alternates: {
         canonical: '/jpg-to-pdf',
     },

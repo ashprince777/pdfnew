@@ -65,6 +65,17 @@ http.createServer(async (req, res) => {
         const user = USERS[token];
         return user ? send(res, 200, user) : send(res, 401, { code: 401, msg: 'invalid JWT' });
     }
+    // Admin user list (service role only), used by the /admin dashboard.
+    if (url.pathname === '/auth/v1/admin/users' && req.method === 'GET') {
+        if (token !== 'service-role-key') return send(res, 403, { msg: 'forbidden' });
+        const users = Object.values(USERS).map((u, i) => ({
+            ...u,
+            created_at: new Date(Date.now() - i * 86400000).toISOString(),
+            email_confirmed_at: new Date().toISOString(),
+            last_sign_in_at: new Date().toISOString(),
+        }));
+        return send(res, 200, { users, aud: 'authenticated' });
+    }
     if (url.pathname.startsWith('/auth/v1/')) return send(res, 200, {});
 
     // Groq chat completions (OpenAI-compatible streaming). A document containing FAIL_UPSTREAM gets a 400 error.

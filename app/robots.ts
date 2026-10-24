@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
             userAgent: '*',
             allow: '/',
-            disallow: ['/api/', '/_next/', '/account', '/auth/', '/reset-password'],
+            disallow: ['/api/', '/_next/', '/account', '/admin', '/auth/', '/reset-password'],
         },
         sitemap: 'https://www.pdfadore.com/sitemap.xml',
     };

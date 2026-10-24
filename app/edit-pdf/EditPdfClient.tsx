@@ -13,6 +13,7 @@ import { openPdfjsDocument } from '@/lib/pdfjs';
 import { analyzePage, ocrPage, rgbToHex, sampleColors, type PageAnalysis, type TextSegment } from '@/lib/pageAnalysis';
 import { drawnAspect, findPageImages, replacePageImage } from '@/lib/pageContent';
 import { removeTextInBoxes, type UserBox } from '@/lib/textRemoval';
+import { whiteoutImagesInBoxes } from '@/lib/imageWhiteout';
 import { useToolRunner } from '@/lib/useToolRunner';
 import { PremiumBadge, UpgradePrompt, usePremiumFeature } from '@/components/PremiumGate';
 import styles from './EditPdf.module.css';
@@ -147,6 +148,8 @@ export default function EditPdfClient() {
     const [imagesByPage, setImagesByPage] = useState<Record<number, ImageBox[]>>({});
     const [analyzing, setAnalyzing] = useState(false);
     const [ocrProgress, setOcrProgress] = useState<number | null>(null);
+    /** Pages whose text came from OCR (scans): edits there must also clean the scanned image. */
+    const [ocrPages, setOcrPages] = useState<Set<number>>(() => new Set());
     const overlayRef = useRef<HTMLDivElement | null>(null);
     const inlineInputRef = useRef<HTMLInputElement | null>(null);
     const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -351,6 +354,7 @@ export default function EditPdfClient() {
             if (!analysis) return;
             const segments = await ocrPage(analysis, setOcrProgress);
             setSegmentsByPage((prev) => ({ ...prev, [currentPage]: segments }));
+            if (segments.length > 0) setOcrPages((prev) => new Set(prev).add(currentPage));
             if (segments.length === 0) notify('No text was recognised on this page.');
         } catch (error) {
             console.error('OCR failed', error);
@@ -413,6 +417,9 @@ export default function EditPdfClient() {
             // can't be copied, searched or recovered from the file. This must run before anything
             // is drawn on the page.
             const boxesByPage = new Map<number, UserBox[]>();
+            // Boxes whose pixels must also be whited out in page images: Whiteout everywhere, and
+            // replaced text only on scanned (OCR) pages, so photos behind normal text are untouched.
+            const imageBoxesByPage = new Map<number, UserBox[]>();
             for (const ann of changes) {
                 if ((ann.kind !== 'replace' && ann.kind !== 'whiteout') || ann.page > pdfDoc.getPageCount()) continue;
                 const frame = getVisualFrame(pdfDoc.getPage(ann.page - 1));
@@ -420,8 +427,12 @@ export default function EditPdfClient() {
                 const a = frame.toPdf(ann.x * frame.width - pad, frame.height - (ann.y + ann.h) * frame.height - pad);
                 const b = frame.toPdf((ann.x + ann.w) * frame.width + pad, frame.height - ann.y * frame.height + pad);
                 const list = boxesByPage.get(ann.page - 1) ?? [];
-                list.push({ x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) });
+                const box = { x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) };
+                list.push(box);
                 boxesByPage.set(ann.page - 1, list);
+                if (ann.kind === 'whiteout' || ocrPages.has(ann.page)) {
+                    imageBoxesByPage.set(ann.page - 1, [...(imageBoxesByPage.get(ann.page - 1) ?? []), box]);
+                }
             }
             for (const [pageIndex, boxes] of boxesByPage) {
                 try {
@@ -429,6 +440,14 @@ export default function EditPdfClient() {
                 } catch (error) {
                     // Unusual content streams: fall back to covering the text (previous behaviour).
                     console.warn('Could not remove original text from page', pageIndex + 1, error);
+                }
+            }
+            // Scanned pages: the words are pixels in a photo, so paint them white in the image too.
+            for (const [pageIndex, boxes] of imageBoxesByPage) {
+                try {
+                    await whiteoutImagesInBoxes(pdfDoc, pageIndex, boxes);
+                } catch (error) {
+                    console.warn('Could not clean the scanned image on page', pageIndex + 1, error);
                 }
             }
 
@@ -824,7 +843,7 @@ export default function EditPdfClient() {
                     </div>
 
                     <p className={styles.footnote}>
-                        Edited text uses Noto Sans in the original size and colour. Replaced text, whited-out text and replaced images are fully removed from the file.
+                        Edited text uses Noto Sans in the original size and colour. Replaced text, whited-out text (also on scanned pages) and replaced images are fully removed from the file.
                     </p>
 
                     <div className={styles.applyBar}>

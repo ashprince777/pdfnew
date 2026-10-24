@@ -269,6 +269,42 @@ await test('compress extreme', async (page) => {
     return heading;
 });
 
+await test('compress pdf to 200kb page fits the limit', async (page) => {
+    await open(page, '/compress-pdf-to-200kb');
+    await page.getByRole('heading', { name: 'Compress PDF to 200 KB' }).waitFor();
+    await upload(page, fx('photo.pdf'));
+    assert(await page.getByRole('radio', { name: /Fit to a size/ }).getAttribute('aria-checked') === 'true', 'size mode not preselected');
+    assert((await page.locator('#target-kb').inputValue()) === '200', 'limit not preset to 200');
+    await click(page, /Compress PDF/);
+    const { bytes } = await result(page, 240000);
+    const original = fs.statSync(fx('photo.pdf')).size;
+    assert(bytes.length <= 200 * 1024, `result ${bytes.length} bytes is over 200 KB`);
+    const info = await pdfInfo(bytes);
+    assert(info.numPages > 0, 'result has no pages');
+    return `${Math.round(original / 1024)} KB -> ${Math.round(bytes.length / 1024)} KB (limit 200 KB)`;
+});
+
+await test('compress to custom size and seo pages render', async (page) => {
+    await open(page, '/compress-pdf');
+    await upload(page, fx('photo.pdf'));
+    await page.getByRole('radio', { name: /Fit to a size/ }).click();
+    await page.locator('#target-kb').fill('500');
+    await click(page, /Compress PDF/);
+    const { bytes } = await result(page, 240000);
+    assert(bytes.length <= 500 * 1024, `result ${bytes.length} bytes is over 500 KB`);
+    for (const route of ['/compress-pdf-to-50kb', '/compress-pdf-to-100kb', '/compress-pdf-to-500kb', '/compress-pdf-to-1mb', '/blog', '/blog/aadhaar-pan-itr-pdf-password']) {
+        const res = await page.goto(BASE + route);
+        assert(res.status() === 200, `${route} returned ${res.status()}`);
+    }
+    await page.getByRole('heading', { level: 1, name: /Aadhaar, PAN, ITR/ }).waitFor();
+    assert(await page.getByText('SURE1990').first().isVisible(), 'Aadhaar password example missing');
+    const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    assert(sitemap.includes('/compress-pdf-to-200kb') && sitemap.includes('/blog/how-to-merge-pdf-files'), 'new pages missing from sitemap');
+    const adminRes = await page.goto(`${BASE}/admin`);
+    assert(adminRes.status() === 404, `/admin should be hidden, got ${adminRes.status()}`);
+    return `${Math.round(bytes.length / 1024)} KB under a 500 KB limit; 5 size pages + blog + sitemap OK; /admin hidden`;
+});
+
 await test('compress text-only keeps original', async (page) => {
     await open(page, '/compress-pdf');
     await upload(page, fx('sample.pdf'));

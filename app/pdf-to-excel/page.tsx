@@ -5,8 +5,8 @@ import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToExcelClient from './PdfToExcelClient';
 
 export const metadata: Metadata = {
-    title: 'PDF to Excel Converter - Convert PDF to XLS/XLSX',
-    description: 'Convert PDF tables to editable Excel spreadsheets. Extract data accurately from your documents into XLS/XLSX format.',
+    title: 'PDF to Excel Converter Online Free - PDF to XLSX',
+    description: 'Convert PDF tables, bank statements and invoices to editable Excel (XLSX) for free. Your file is processed in your browser and never uploaded.',
     alternates: {
         canonical: '/pdf-to-excel',
     },

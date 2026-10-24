@@ -1,4 +1,5 @@
 "use client";
+import { trackEvent } from '@/lib/analytics';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -160,6 +161,7 @@ export function SignupForm() {
         });
         setBusy(false);
         if (err) return setError(friendlyAuthError(err.message));
+        trackEvent('sign_up', { method: 'email' });
         if (!data.session) {
             // Email confirmation is on: the account becomes usable after clicking the link.
             setCheckEmail(true);
