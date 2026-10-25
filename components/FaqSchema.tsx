@@ -1,28 +1,13 @@
-import React from 'react';
+import JsonLd from './JsonLd';
+import { faqSchema } from '@/lib/seo';
 
 type FaqItem = {
     question: string;
     answer: string;
 };
 
+/** FAQPage structured data built from the same questions shown on the page (invisible). */
 export default function FaqSchema({ items }: { items: FaqItem[] }) {
-    const schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: items.map((item) => ({
-            '@type': 'Question',
-            name: item.question,
-            acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.answer,
-            },
-        })),
-    };
-
-    return (
-        <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-        />
-    );
+    if (!items.length) return null;
+    return <JsonLd data={faqSchema(items)} />;
 }

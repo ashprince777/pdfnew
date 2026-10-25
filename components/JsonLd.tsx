@@ -1,0 +1,14 @@
+/**
+ * Renders structured data as <script type="application/ld+json">. Invisible to visitors.
+ * `<` is escaped so text inside the data can never close the script tag.
+ */
+export default function JsonLd({ data }: { data: Record<string, unknown> | Record<string, unknown>[] }) {
+    const items = Array.isArray(data) ? data : [data];
+    return (
+        <>
+            {items.map((item, i) => (
+                <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(item).replace(/</g, '\\u003c') }} />
+            ))}
+        </>
+    );
+}
