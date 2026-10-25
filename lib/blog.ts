@@ -328,6 +328,51 @@ export const ARTICLES: Article[] = [
             { question: 'Does the translation keep the original layout?', answer: 'The translation keeps the page order, paragraphs and lists, and can be downloaded as a Word document. Images and the exact page design are not recreated.' },
         ],
     },
+    {
+        slug: 'extract-text-from-scanned-pdf',
+        title: 'How to Extract Text from a PDF, Even a Scanned One (OCR)',
+        description: 'Copy all the text out of a PDF as a plain text file, and use OCR to read scanned pages and phone photos. Free, and the file never leaves your device.',
+        published: '2026-10-25',
+        readMinutes: 3,
+        tool: { href: '/pdf-to-text', label: 'PDF to Text' },
+        blocks: [
+            { type: 'p', text: 'Copying text out of a PDF often goes wrong: lines break in odd places, columns get mixed up, or nothing can be selected at all. The last case usually means the PDF is a scan, a picture of a page rather than real text.' },
+            { type: 'h2', text: 'Is your PDF a scan?' },
+            {
+                type: 'ul',
+                items: [
+                    'If you can select single words with your mouse or finger, the PDF has a text layer and the text can be extracted directly.',
+                    'If a tap selects the whole page like a picture, it is a scan or photo. You need OCR (optical character recognition) to read it.',
+                    'Many PDFs from offices and government portals mix both: typed pages plus scanned attachments.',
+                ],
+            },
+            { type: 'h2', text: 'Extract the text in three steps' },
+            {
+                type: 'ol',
+                items: [
+                    'Open PDFAdore PDF to Text and select your PDF.',
+                    'Keep "Use OCR" selected so scanned pages are read too, or choose "Text only" for a faster run on typed PDFs.',
+                    'Click Extract text and download the .txt file. Each page is marked so you can find your place.',
+                ],
+            },
+            { type: 'cta', text: 'Get the text from your PDF now. Free, private and works on mobile.', href: '/pdf-to-text', label: 'Open PDF to Text' },
+            { type: 'h2', text: 'Getting better OCR results' },
+            {
+                type: 'ul',
+                items: [
+                    'Scan at 300 DPI or take photos in good light, holding the phone straight above the page.',
+                    'Crop away table edges and fingers before converting; Scan to PDF does this for you on a phone.',
+                    'OCR currently reads English text. Always check numbers, names and dates, because similar characters such as 0 and O can be confused.',
+                ],
+            },
+            { type: 'tip', text: 'Need the layout, tables and fonts as well as the words? Use PDF to Word instead. A .txt file keeps plain text only.' },
+        ],
+        faq: [
+            { question: 'Can I extract text from a scanned PDF for free?', answer: 'Yes. PDFAdore PDF to Text runs OCR on scanned pages for free, inside your browser, without uploading the file.' },
+            { question: 'Why can I not copy text from my PDF?', answer: 'Either the PDF is a scan with no text layer, or the author restricted copying. Use PDF to Text with OCR for scans; for a restricted file you own, remove the restriction with Unlock PDF first.' },
+            { question: 'Does OCR work for Hindi or other Indian languages?', answer: 'Not yet. OCR on PDFAdore currently reads English. Typed PDFs in any language can still be extracted with "Text only".' },
+        ],
+    },
 ];
 
 export const getArticle = (slug: string) => ARTICLES.find((a) => a.slug === slug);
