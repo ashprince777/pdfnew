@@ -9,11 +9,16 @@ import { pageMetadata, toolSchema } from '@/lib/seo';
 
 /** Where each size limit typically comes up, so every landing page has its own useful copy. */
 const USE_CASES: Record<number, string> = {
-    50: 'Very small limits like 50 KB are common for signature and certificate uploads in scholarship, admission and recruitment forms.',
+    20: 'A 20 KB limit usually applies to a single-page upload such as a signature, thumb impression or small certificate on recruitment and scholarship portals.',
+    50:'Very small limits like 50 KB are common for signature and certificate uploads in scholarship, admission and recruitment forms.',
     100: 'Many government job, exam and admission portals ask for documents under 100 KB, such as caste, income or domicile certificates.',
+    150: 'Some university, exam and bank portals set a 150 KB cap for scanned documents such as mark sheets, ID cards and fee receipts.',
     200: 'A 200 KB limit is one of the most common on Indian online forms, for example for mark sheets, ID proof and supporting documents.',
+    300: 'A 300 KB limit is common for multi-page documents on job, admission and loan application portals, such as experience letters or degree certificates.',
+    400: 'Limits around 400 KB come up on some state government, university and recruitment portals for multi-page certificates and supporting documents.',
     500: 'Portals that accept larger scans, such as some passport, visa, bank and insurance forms, often allow up to 500 KB per document.',
     1024: 'A 1 MB limit is typical for email-friendly attachments, college applications and many company HR and KYC portals.',
+    2048: 'A 2 MB limit is common for tender documents, court e-filing, insurance claims and longer reports that you need to email or upload in one file.',
 };
 
 export function compressSizeMetadata(kb: number): Metadata {
