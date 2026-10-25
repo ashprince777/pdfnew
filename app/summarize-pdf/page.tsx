@@ -3,14 +3,10 @@ import AiPdfTool from '@/components/AiPdfTool';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Summarize PDF with AI - Free PDF Summarizer',
-    description: 'Summarize any PDF with AI: an overview, key points, dates and action items in seconds. Summaries in English, Hindi, Tamil and 20+ languages.',
-    alternates: {
-        canonical: '/summarize-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/summarize-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function SummarizePdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/summarize-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

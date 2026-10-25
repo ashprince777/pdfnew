@@ -3,15 +3,10 @@ import PdfToPowerpointClient from './PdfToPowerpointClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF to PowerPoint Converter - Convert PDF to PPTX Online',
-    description: 'Convert your PDF files to editable PowerPoint presentations (PPTX) online for free. No registration needed.',
-    keywords: ['pdf to powerpoint', 'pdf to pptx', 'convert pdf to pptx', 'free pdf converter'],
-    alternates: {
-        canonical: 'https://www.pdfadore.com/pdf-to-powerpoint',
-    },
-};
+export const metadata: Metadata = pageMetadata('/pdf-to-powerpoint');
 
 const faqItems = [
     { question: 'How does PDF to PowerPoint conversion work?', answer: 'Each page of your PDF is rendered as a high-quality image and placed onto a PowerPoint slide.' },
@@ -29,6 +24,7 @@ const benefits = [
 export default function PdfToPowerpointPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/pdf-to-powerpoint')} />
             <BreadcrumbSchema items={[
                 { name: 'Home', item: '/' },
                 { name: 'PDF to PowerPoint', item: '/pdf-to-powerpoint' },

@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import OrganizePdfClient from './OrganizePdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Organize PDF Online - Sort, Delete & Move Pages',
-    description: 'Organize PDF pages online. Reorder, move, or delete pages from your PDF document. Drag and drop interface.',
-    alternates: {
-        canonical: '/organize-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/organize-pdf');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function OrganizePdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/organize-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

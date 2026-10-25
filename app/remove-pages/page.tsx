@@ -3,14 +3,10 @@ import RemovePagesClient from './RemovePagesClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Remove Pages from PDF Online Free - Delete PDF Pages',
-    description: 'Delete unwanted pages from your PDF documents online for free. Select pages visually or by page number range. 100% private and secure.',
-    alternates: {
-        canonical: '/remove-pages',
-    },
-};
+export const metadata: Metadata = pageMetadata('/remove-pages');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function RemovePagesPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/remove-pages')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToWordClient from './PdfToWordClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF to Word Converter Online Free - Convert PDF to DOCX',
-    description: 'Convert PDF to editable Word (DOCX) for free. Keeps text, tables and layout, opens in Microsoft Word and Google Docs. No sign-up; your file never leaves your device.',
-    alternates: {
-        canonical: '/pdf-to-word',
-    },
-};
+export const metadata: Metadata = pageMetadata('/pdf-to-word');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function PdfToWordPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/pdf-to-word')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

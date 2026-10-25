@@ -3,14 +3,10 @@ import ComparePdfClient from './ComparePdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Compare PDF Online Free - Find Differences in PDF Documents',
-    description: 'Compare two PDF documents side by side to detect text changes, additions, and deletions online for free. Fast, private, and secure.',
-    alternates: {
-        canonical: '/compare-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/compare-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function ComparePdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/compare-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

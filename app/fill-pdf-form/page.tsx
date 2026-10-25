@@ -3,14 +3,10 @@ import FillFormClient from './FillFormClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Fill PDF Forms Online Free - Type Into Fillable PDFs',
-    description: 'Fill in PDF forms online: text fields, checkboxes, radio buttons and dropdowns. Download the filled form or flatten it so it cannot be changed.',
-    alternates: {
-        canonical: '/fill-pdf-form',
-    },
-};
+export const metadata: Metadata = pageMetadata('/fill-pdf-form');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function FillPdfFormPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/fill-pdf-form')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

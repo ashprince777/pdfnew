@@ -3,14 +3,10 @@ import RedactPdfClient from './RedactPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Redact PDF Online Free - Permanently Remove Sensitive Text',
-    description: 'Black out names, account numbers and other private information in a PDF. Redacted content is permanently removed, not just covered. Free and private.',
-    alternates: {
-        canonical: '/redact-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/redact-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function RedactPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/redact-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

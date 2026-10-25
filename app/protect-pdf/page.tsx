@@ -3,14 +3,10 @@ import ProtectClient from './ProtectClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Protect PDF Online - Encrypt PDF with Password',
-    description: 'Secure your PDF files with a password. Protect sensitive documents online with strong encryption. Fast, secure, and free.',
-    alternates: {
-        canonical: '/protect-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/protect-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function ProtectPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/protect-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

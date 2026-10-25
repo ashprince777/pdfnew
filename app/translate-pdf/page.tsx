@@ -3,14 +3,10 @@ import AiPdfTool from '@/components/AiPdfTool';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Translate PDF with AI - Hindi, Tamil, English and 20+ Languages',
-    description: 'Translate the text of a PDF into Hindi, Bengali, Tamil, Telugu, English, Spanish and more with AI. Download the translation as Word.',
-    alternates: {
-        canonical: '/translate-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/translate-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function TranslatePdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/translate-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

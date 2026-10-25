@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import WatermarkPdfClient from './WatermarkPdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Add Watermark to PDF Online - Free PDF Watermarker',
-    description: 'Add text or image watermarks to your PDF documents online. Protect your copyright and branding instantly for free.',
-    alternates: {
-        canonical: '/watermark-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/watermark-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function WatermarkPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/watermark-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

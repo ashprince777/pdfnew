@@ -3,14 +3,10 @@ import EditPdfClient from './EditPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF Editor Online Free - Edit Text in PDF',
-    description: 'Free online PDF editor: change existing text, add text, white out, highlight and replace images. Works on scanned PDFs with OCR. No upload, no sign-up.',
-    alternates: {
-        canonical: '/edit-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/edit-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function EditPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/edit-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

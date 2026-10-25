@@ -3,14 +3,10 @@ import CropPdfClient from './CropPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Crop PDF Online Free - Trim PDF Margins',
-    description: 'Crop PDF margins online for free. Adjust top, bottom, left, and right borders easily. Fast, precise, and completely private.',
-    alternates: {
-        canonical: '/crop-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/crop-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function CropPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/crop-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

@@ -3,14 +3,10 @@ import ScanToPdfClient from './ScanToPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Scan to PDF Online Free - Use Your Camera as a Scanner',
-    description: 'Scan paper documents with your phone or laptop camera and save them as a clean, multi-page PDF. Document filter, A4 pages, no app needed.',
-    alternates: {
-        canonical: '/scan-to-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/scan-to-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function ScanToPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/scan-to-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

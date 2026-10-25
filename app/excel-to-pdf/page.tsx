@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import ExcelToPdfClient from './ExcelToPdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Excel to PDF Converter - Convert XLS to PDF Online',
-    description: 'Convert Excel spreadsheets (XLS, XLSX) to PDF format online. Create easy-to-read reports from your data.',
-    alternates: {
-        canonical: '/excel-to-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/excel-to-pdf');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function ExcelToPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/excel-to-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

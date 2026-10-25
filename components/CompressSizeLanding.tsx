@@ -4,6 +4,8 @@ import CompressClient from '@/app/compress-pdf/CompressClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import { SIZE_PRESETS_KB, sizeLabel, sizeSlug } from '@/lib/compressSizes';
+import JsonLd from '@/components/JsonLd';
+import { pageMetadata, toolSchema } from '@/lib/seo';
 
 /** Where each size limit typically comes up, so every landing page has its own useful copy. */
 const USE_CASES: Record<number, string> = {
@@ -15,12 +17,7 @@ const USE_CASES: Record<number, string> = {
 };
 
 export function compressSizeMetadata(kb: number): Metadata {
-    const label = sizeLabel(kb);
-    return {
-        title: `Compress PDF to ${label} Online Free - Reduce PDF Size to ${label}`,
-        description: `Reduce a PDF to under ${label} in seconds for online forms, exam applications and email. Free, no sign-up, and your file never leaves your device.`,
-        alternates: { canonical: `/compress-pdf-to-${sizeSlug(kb)}` },
-    };
+    return pageMetadata(`/compress-pdf-to-${sizeSlug(kb)}`);
 }
 
 export default function CompressSizeLanding({ kb }: { kb: number }) {
@@ -46,6 +43,12 @@ export default function CompressSizeLanding({ kb }: { kb: number }) {
 
     return (
         <>
+            <JsonLd
+                data={toolSchema(`/compress-pdf-to-${sizeSlug(kb)}`, {
+                    name: `Compress PDF to ${label}`,
+                    description: `Reduce a PDF to under ${label} in your browser. Free, no sign-up, and the file is never uploaded.`,
+                })}
+            />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

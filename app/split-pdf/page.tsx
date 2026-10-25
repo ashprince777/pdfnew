@@ -3,14 +3,10 @@ import SplitClient from './SplitClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Split PDF Pages Online Free - Extract Pages from PDF',
-    description: 'Split PDF pages online for free: extract the pages you need, or save every page as a separate PDF. Fast, private and works on mobile.',
-    alternates: {
-        canonical: '/split-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/split-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function SplitPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/split-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

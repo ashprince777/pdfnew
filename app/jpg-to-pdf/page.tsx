@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import JpgToPdfClient from './JpgToPdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'JPG to PDF Converter - Image & Photo to PDF Online Free',
-    description: 'Convert JPG, PNG and phone photos to PDF for free. Combine many images into one PDF in any order. Works on mobile; your photos never leave your device.',
-    alternates: {
-        canonical: '/jpg-to-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/jpg-to-pdf');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function JpgToPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/jpg-to-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

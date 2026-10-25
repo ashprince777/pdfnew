@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import UnlockPdfClient from './UnlockPdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF Password Remover - Unlock PDF Online Free',
-    description: 'Remove the password from a PDF you can open, such as e-Aadhaar, PAN, ITR or bank statement PDFs. Free PDF password remover that works in your browser; nothing is uploaded.',
-    alternates: {
-        canonical: '/unlock-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/unlock-pdf');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function UnlockPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/unlock-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

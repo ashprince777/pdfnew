@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToJpgClient from './PdfToJpgClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF to JPG - Convert PDF to Image Online Free',
-    description: 'Convert PDF to JPG or PNG images online for free. Every page becomes a high-quality image, ready to share on WhatsApp or upload to forms. No upload, no sign-up.',
-    alternates: {
-        canonical: '/pdf-to-jpg',
-    },
-};
+export const metadata: Metadata = pageMetadata('/pdf-to-jpg');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function PdfToJpgPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/pdf-to-jpg')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

@@ -3,14 +3,10 @@ import RepairClient from './RepairClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Repair PDF Online - Fix Corrupted PDF Files',
-    description: 'Recover and repair damaged PDF files online. Fix corrupted documents for free. No software installation required.',
-    alternates: {
-        canonical: '/repair-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/repair-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function RepairPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/repair-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

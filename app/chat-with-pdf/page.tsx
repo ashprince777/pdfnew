@@ -3,14 +3,10 @@ import AiPdfTool from '@/components/AiPdfTool';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Chat with PDF - Ask Questions About Any PDF with AI',
-    description: 'Ask questions about your PDF and get answers with page references. Understand contracts, reports, research papers and bills faster.',
-    alternates: {
-        canonical: '/chat-with-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/chat-with-pdf');
 
 const faqItems = [
     {
@@ -41,6 +37,7 @@ const benefits = [
 export default function ChatWithPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/chat-with-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

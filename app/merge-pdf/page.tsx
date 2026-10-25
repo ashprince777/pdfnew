@@ -3,14 +3,19 @@ import MergeClient from './MergeClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import styles from './page.module.css';
+import { howToSchema, pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Merge PDF Online Free - Combine PDF Files into One',
-    description: 'Merge PDF files into one document for free. Drag to set the order, works on mobile, and your files are never uploaded. No sign-up needed.',
-    alternates: {
-        canonical: '/merge-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/merge-pdf');
+
+/** Same steps as the visible "How to Merge PDFs Step-by-Step" list below. */
+const howToSteps = [
+    'Click the “Browse Files” button or drag and drop your files into the upload area.',
+    'Select two or more PDF documents you wish to combine.',
+    'Drag files (or use the arrow buttons) to put them in the right order. You can add more files or remove ones you don’t need.',
+    'Click the “Merge PDF” button.',
+    'Wait a moment for the process to complete, then download your merged file instantly.',
+];
 
 const faqItems = [
     {
@@ -38,6 +43,7 @@ const faqItems = [
 export default function MergePdfPage() {
     return (
         <>
+            <JsonLd data={[toolSchema('/merge-pdf'), howToSchema('How to merge PDF files into one', howToSteps, '/merge-pdf')]} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

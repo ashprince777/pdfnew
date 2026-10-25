@@ -3,14 +3,10 @@ import PowerpointToPdfClient from './PowerpointToPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PowerPoint to PDF Online - Convert PPTX to PDF Free',
-    description: 'Convert PowerPoint PPTX and PPT files to PDF online. Free, secure, and fast conversion.',
-    alternates: {
-        canonical: '/powerpoint-to-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/powerpoint-to-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function PowerpointToPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/powerpoint-to-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

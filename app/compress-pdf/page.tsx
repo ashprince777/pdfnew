@@ -3,14 +3,10 @@ import CompressClient from './CompressClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Compress PDF - Reduce PDF Size Online Free (to 100KB, 200KB)',
-    description: 'Reduce PDF size online for free: compress to a specific size like 100 KB or 200 KB for government forms, or shrink files for email. No upload, no sign-up.',
-    alternates: {
-        canonical: '/compress-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/compress-pdf');
 
 const faqItems = [
     {
@@ -45,6 +41,7 @@ const benefits = [
 export default function CompressPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/compress-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

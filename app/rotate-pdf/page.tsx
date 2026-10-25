@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import RotatePdfClient from './RotatePdfClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Rotate PDF Online - Free PDF Rotator',
-    description: 'Rotate PDF pages permanently. Rotate single pages or the entire document 90, 180, or 270 degrees. Private and secure.',
-    alternates: {
-        canonical: '/rotate-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/rotate-pdf');
 
 const faqItems = [
     {
@@ -33,6 +29,7 @@ const benefits = [
 export default function RotatePdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/rotate-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

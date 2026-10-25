@@ -3,14 +3,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import PdfToExcelClient from './PdfToExcelClient';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'PDF to Excel Converter Online Free - PDF to XLSX',
-    description: 'Convert PDF tables, bank statements and invoices to editable Excel (XLSX) for free. Your file is processed in your browser and never uploaded.',
-    alternates: {
-        canonical: '/pdf-to-excel',
-    },
-};
+export const metadata: Metadata = pageMetadata('/pdf-to-excel');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function PdfToExcelPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/pdf-to-excel')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

@@ -3,14 +3,10 @@ import PageNumbersClient from './PageNumbersClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Add Page Numbers to PDF Online Free',
-    description: 'Insert page numbers into PDF documents easily. Choose numbering position, typography, and format. Free and 100% private in browser.',
-    alternates: {
-        canonical: '/add-page-numbers',
-    },
-};
+export const metadata: Metadata = pageMetadata('/add-page-numbers');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function AddPageNumbersPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/add-page-numbers')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },

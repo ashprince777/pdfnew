@@ -3,14 +3,10 @@ import HtmlToPdfClient from './HtmlToPdfClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
+import { pageMetadata, toolSchema } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'HTML to PDF Online - Convert Webpages to PDF Free',
-    description: 'Convert HTML files to PDF online. Upload your HTML file and download a PDF version. Free and secure.',
-    alternates: {
-        canonical: '/html-to-pdf',
-    },
-};
+export const metadata: Metadata = pageMetadata('/html-to-pdf');
 
 const faqItems = [
     {
@@ -37,6 +33,7 @@ const benefits = [
 export default function HtmlToPdfPage() {
     return (
         <>
+            <JsonLd data={toolSchema('/html-to-pdf')} />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', item: '/' },
