@@ -1,5 +1,6 @@
 import React from 'react';
 import Accordion from './Accordion';
+import RelatedTools from './RelatedTools';
 import { CURRENCY_SYMBOL, PREMIUM_PRICES_INR, TRIAL_DAYS } from '@/lib/plans';
 
 interface ToolSeoContentProps {
@@ -77,6 +78,8 @@ export default function ToolSeoContent({
 
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Frequently Asked Questions</h2>
             <Accordion items={faqItems} />
+
+            <RelatedTools />
         </div>
     );
 }

@@ -17,7 +17,7 @@ export interface PageSeo {
 
 export const PAGE_SEO: Record<string, PageSeo> = {
     '/': {
-        title: 'PDFAdore: Free PDF Tools That Never Upload Your Files',
+        title: 'PDFAdore: Free Online PDF Tools - Merge, Compress, Convert',
         description: 'Merge, split, compress, convert, sign and edit PDFs free in your browser. Files never leave your device. No sign-up, no watermark, works on any phone.',
     },
     // ---- Tools -------------------------------------------------------------------------------------
@@ -26,15 +26,15 @@ export const PAGE_SEO: Record<string, PageSeo> = {
         description: 'Combine PDF files into one document for free. Drag to set the order, works on mobile, and your files are never uploaded to a server. No sign-up needed.',
     },
     '/split-pdf': {
-        title: 'Split PDF Online Free - Extract Pages | PDFAdore',
+        title: 'Split PDF Online Free - Extract Pages from PDF | PDFAdore',
         description: 'Split a PDF into separate files or extract only the pages you need. Free, fast and private: your PDF is processed in your browser and never uploaded.',
     },
     '/remove-pages': {
-        title: 'Remove Pages from PDF Free - Delete Pages | PDFAdore',
+        title: 'Delete Pages from PDF Online Free - Remove Pages | PDFAdore',
         description: 'Delete unwanted pages from a PDF in seconds. Click the pages to remove or type page numbers. Free, no sign-up, and your file never leaves your device.',
     },
     '/organize-pdf': {
-        title: 'Organize PDF Pages - Reorder & Rotate Free | PDFAdore',
+        title: 'Rearrange PDF Pages Online Free - Organize PDF | PDFAdore',
         description: 'Reorder, rotate and delete PDF pages with simple drag and drop. Free online page organizer that works on phone and desktop, with no file upload needed.',
     },
     '/compress-pdf': {
@@ -46,7 +46,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
         description: 'Fix a damaged or corrupted PDF that will not open. PDFAdore rebuilds the file structure and keeps text and links. Free, private and works in your browser.',
     },
     '/jpg-to-pdf': {
-        title: 'JPG to PDF Converter - Photos to PDF Free | PDFAdore',
+        title: 'JPG to PDF - Image to PDF Converter Free | PDFAdore',
         description: 'Convert JPG, PNG and phone photos into one PDF for free. Set page size, margins and order. Works on mobile and your images are never uploaded anywhere.',
     },
     '/word-to-pdf': {
@@ -84,6 +84,22 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     '/pdf-to-jpg': {
         title: 'PDF to JPG Converter Free - PDF to Image | PDFAdore',
         description: 'Convert each PDF page into a high-quality JPG or PNG image for free. Download all pages as a ZIP. Works on phone and desktop with no file upload needed.',
+    },
+    '/pdf-to-png': {
+        title: 'PDF to PNG Converter Online Free - High Quality | PDFAdore',
+        description: 'Convert PDF pages to sharp, lossless PNG images for free. Choose 96, 150 or 300 DPI and download all pages as a ZIP. No upload, works on phone and PC.',
+    },
+    '/pdf-to-text': {
+        title: 'PDF to Text Converter Free - Extract Text & OCR | PDFAdore',
+        description: 'Extract all text from a PDF into a plain .txt file for free, with OCR for scanned pages. Copy or download the text. Your PDF is never uploaded anywhere.',
+    },
+    '/png-to-pdf': {
+        title: 'PNG to PDF Converter Online Free - Combine PNGs | PDFAdore',
+        description: 'Convert PNG images and screenshots into one PDF for free. Reorder pages, pick A4 or original size, and download. No sign-up and nothing is uploaded.',
+    },
+    '/webp-to-pdf': {
+        title: 'WebP to PDF Converter Online Free | PDFAdore',
+        description: 'Convert WebP images saved from websites and WhatsApp into a PDF for free. Combine many WebP files into one document. No upload, works on any device.',
     },
     '/pdf-to-pdfa': {
         title: 'PDF to PDF/A Converter - Archival PDF | PDFAdore',
@@ -147,7 +163,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     },
     // ---- Static pages --------------------------------------------------------------------------------
     '/all-tools': {
-        title: 'All 31 Free PDF Tools in One Place | PDFAdore',
+        title: 'All 32 Free PDF Tools in One Place | PDFAdore',
         description: 'Every PDFAdore tool in one list: merge, split, compress, convert, edit, sign, protect and AI PDF tools. Free, private and runs right in your browser.',
     },
     '/pricing': {
@@ -224,6 +240,10 @@ export const BLOG_SEO: Record<string, PageSeo> = {
     'how-to-convert-pdf-to-word': {
         title: 'How to Convert PDF to Word and Keep the Formatting',
         description: 'Turn a PDF into an editable Word document with its text, tables and layout intact, plus what to do with scanned PDFs. Free guide, no upload needed.',
+    },
+    'extract-text-from-scanned-pdf': {
+        title: 'Extract Text from Scanned PDF with OCR (Free Guide)',
+        description: 'How to copy text out of any PDF, including scanned pages and phone photos, using free in-browser OCR. Download the text as a .txt file.',
     },
     'translate-pdf-to-hindi': {
         title: 'How to Translate a PDF to Hindi or English with AI',

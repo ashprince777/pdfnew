@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { ALL_TOOLS } from '@/lib/tools';
+import { ALL_TOOLS, TOOL_VARIANTS } from '@/lib/tools';
 import { ARTICLES } from '@/lib/blog';
 import { SIZE_PRESETS_KB, sizeSlug } from '@/lib/compressSizes';
 
@@ -17,6 +17,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: LAST_UPDATED,
             changeFrequency: 'monthly' as const,
             priority: 0.8,
+        })),
+        ...TOOL_VARIANTS.map((variant) => ({
+            url: `${BASE_URL}${variant.href}`,
+            lastModified: LAST_UPDATED,
+            changeFrequency: 'monthly' as const,
+            priority: 0.7,
         })),
         ...SIZE_PRESETS_KB.map((kb) => ({
             url: `${BASE_URL}/compress-pdf-to-${sizeSlug(kb)}`,

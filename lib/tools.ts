@@ -26,6 +26,7 @@ import {
     EyeOff,
     FormInput,
     ScanLine,
+    Type,
     LucideIcon
 } from 'lucide-react';
 
@@ -214,6 +215,14 @@ export const ALL_TOOLS: ToolItem[] = [
         category: 'from_pdf',
         access: 'premium',
     },
+    {
+        title: 'PDF to Text',
+        description: 'Extract all text from a PDF, with OCR for scanned pages.',
+        href: '/pdf-to-text',
+        icon: Type,
+        color: 'var(--cat-from-pdf)',
+        category: 'from_pdf',
+    },
 
     // Edit PDF (Purple)
     {
@@ -335,4 +344,14 @@ export const ALL_TOOLS: ToolItem[] = [
         category: 'ai',
         access: 'account',
     },
+];
+
+/**
+ * Format-specific landing pages that reuse an existing tool (not shown as separate cards).
+ * Listed in the sitemap and linked from the parent tool's page.
+ */
+export const TOOL_VARIANTS: { title: string; href: string; parent: string }[] = [
+    { title: 'PNG to PDF', href: '/png-to-pdf', parent: '/jpg-to-pdf' },
+    { title: 'WebP to PDF', href: '/webp-to-pdf', parent: '/jpg-to-pdf' },
+    { title: 'PDF to PNG', href: '/pdf-to-png', parent: '/pdf-to-jpg' },
 ];

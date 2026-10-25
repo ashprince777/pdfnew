@@ -23,6 +23,7 @@ const FILE_KINDS = {
     pptx: { label: 'Download PowerPoint (.pptx)', icon: Presentation, tint: 'var(--warning)' },
     zip: { label: 'Download ZIP Archive (.zip)', icon: Archive, tint: 'var(--warning)' },
     image: { label: 'Download Image', icon: FileImage, tint: 'var(--cat-edit)' },
+    txt: { label: 'Download Text File (.txt)', icon: FileText, tint: 'var(--cat-from-pdf)' },
     other: { label: 'Download File', icon: FileCheck, tint: 'var(--text-light)' },
 } as const;
 
@@ -36,6 +37,7 @@ function kindForExtension(ext: string): keyof typeof FILE_KINDS {
     if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
     if (ext === 'pptx' || ext === 'ppt') return 'pptx';
     if (ext === 'zip') return 'zip';
+    if (ext === 'txt') return 'txt';
     if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') return 'image';
     return 'other';
 }

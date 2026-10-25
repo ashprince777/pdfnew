@@ -292,7 +292,7 @@ await test('compress to custom size and seo pages render', async (page) => {
     await click(page, /Compress PDF/);
     const { bytes } = await result(page, 240000);
     assert(bytes.length <= 500 * 1024, `result ${bytes.length} bytes is over 500 KB`);
-    for (const route of ['/compress-pdf-to-50kb', '/compress-pdf-to-100kb', '/compress-pdf-to-500kb', '/compress-pdf-to-1mb', '/blog', '/blog/aadhaar-pan-itr-pdf-password']) {
+    for (const route of ['/compress-pdf-to-20kb', '/compress-pdf-to-50kb', '/compress-pdf-to-100kb', '/compress-pdf-to-300kb', '/compress-pdf-to-500kb', '/compress-pdf-to-1mb', '/compress-pdf-to-2mb', '/blog', '/blog/aadhaar-pan-itr-pdf-password']) {
         const res = await page.goto(BASE + route);
         assert(res.status() === 200, `${route} returned ${res.status()}`);
     }
@@ -302,7 +302,7 @@ await test('compress to custom size and seo pages render', async (page) => {
     assert(sitemap.includes('/compress-pdf-to-200kb') && sitemap.includes('/blog/how-to-merge-pdf-files'), 'new pages missing from sitemap');
     const adminRes = await page.goto(`${BASE}/admin`);
     assert(adminRes.status() === 404, `/admin should be hidden, got ${adminRes.status()}`);
-    return `${Math.round(bytes.length / 1024)} KB under a 500 KB limit; 5 size pages + blog + sitemap OK; /admin hidden`;
+    return `${Math.round(bytes.length / 1024)} KB under a 500 KB limit; size pages + blog + sitemap OK; /admin hidden`;
 });
 
 await test('compress text-only keeps original', async (page) => {
@@ -345,6 +345,51 @@ await test('pdf to jpg', async (page) => {
     const files = Object.keys(zip.files);
     assert(files.length === 3 && files.every((f) => f.endsWith('.jpg')), files.join());
     return files.join(', ');
+});
+
+await test('pdf to png page defaults to png', async (page) => {
+    await open(page, '/pdf-to-png');
+    await page.getByRole('heading', { level: 1, name: 'PDF to PNG' }).waitFor();
+    await upload(page, fx('sample.pdf'));
+    await click(page, /Convert to PNG/);
+    const { bytes } = await result(page);
+    const files = Object.keys((await JSZip.loadAsync(bytes)).files);
+    assert(files.length === 3 && files.every((f) => f.endsWith('.png')), files.join());
+    return files.join(', ');
+});
+
+await test('png and webp to pdf pages', async (page) => {
+    for (const [route, heading] of [['/png-to-pdf', 'PNG to PDF'], ['/webp-to-pdf', 'WebP to PDF']]) {
+        await open(page, route);
+        await page.getByRole('heading', { level: 1, name: heading }).waitFor();
+    }
+    await upload(page, fx('logo.png'));
+    await click(page, /Convert to PDF/);
+    const info = await pdfInfo((await result(page)).bytes);
+    assert(info.numPages === 1, `expected 1 page, got ${info.numPages}`);
+    const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    for (const route of ['/png-to-pdf', '/webp-to-pdf', '/pdf-to-png', '/pdf-to-text', '/compress-pdf-to-300kb', '/compress-pdf-to-2mb']) {
+        assert(sitemap.includes(route), `${route} missing from sitemap`);
+    }
+    return 'headings, PNG conversion and sitemap OK';
+});
+
+await test('pdf to text (text layer and OCR)', async (page) => {
+    await open(page, '/pdf-to-text');
+    await upload(page, fx('sample.pdf'));
+    await click(page, /Extract text/);
+    const { bytes, filename } = await result(page);
+    const text = Buffer.from(bytes).toString('utf8');
+    assert(filename.endsWith('.txt') && text.includes('--- Page 3 ---') && text.includes('Page 3'), `text wrong: ${text.slice(0, 120)}`);
+
+    // The scanned fixture is made by the editor suite; skip OCR if it has not run yet.
+    if (!fs.existsSync(fx('doctors-scan.pdf'))) return `${text.length} chars from text layer; OCR skipped (no scanned fixture)`;
+    await open(page, '/pdf-to-text');
+    await upload(page, fx('doctors-scan.pdf'));
+    await click(page, /Extract text/);
+    const scanned = Buffer.from((await result(page, 180000)).bytes).toString('utf8');
+    assert(scanned.trim().split(/\s+/).length > 10, `OCR found too little text: ${scanned.slice(0, 120)}`);
+    return `${text.length} chars from text layer; ${scanned.length} chars via OCR`;
 });
 
 await test('page numbers on rotated page', async (page) => {

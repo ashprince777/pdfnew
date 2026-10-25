@@ -86,7 +86,11 @@ async function embedImage(pdfDoc: PDFDocument, file: File): Promise<PDFImage> {
     }
 }
 
-export default function JpgToPdfClient() {
+/** The PNG to PDF and WebP to PDF pages reuse this tool with their own heading. */
+export default function JpgToPdfClient({
+    title = 'JPG to PDF',
+    subtitle = 'Convert JPG, PNG and other images into a single PDF, in the order you choose.',
+}: { title?: string; subtitle?: string }) {
     const [items, setItems] = useState<ImageItem[]>([]);
     const [pageSize, setPageSize] = useState<PageSize>('a4');
     const [margin, setMargin] = useState<Margin>('small');
@@ -147,7 +151,7 @@ export default function JpgToPdfClient() {
 
     return (
         <div className="container">
-            <ToolHeader title="JPG to PDF" subtitle="Convert JPG, PNG and other images into a single PDF, in the order you choose." />
+            <ToolHeader title={title} subtitle={subtitle} />
 
             {tool.status === 'IDLE' && items.length === 0 && <FileUploader onFilesSelected={handleFilesSelected} multiple accept={ACCEPT} />}
 

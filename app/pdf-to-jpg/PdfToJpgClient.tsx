@@ -13,10 +13,15 @@ import { useToolRunner } from '@/lib/useToolRunner';
 type Dpi = '96' | '150' | '300';
 type Format = 'jpg' | 'png';
 
-export default function PdfToJpgClient() {
+/** The PDF to PNG page reuses this tool with PNG preselected and its own heading. */
+export default function PdfToJpgClient({
+    title = 'PDF to JPG',
+    subtitle = 'Convert each PDF page into a high-quality JPG or PNG image.',
+    defaultFormat = 'jpg',
+}: { title?: string; subtitle?: string; defaultFormat?: Format }) {
     const [file, setFile] = useState<File | null>(null);
     const [dpi, setDpi] = useState<Dpi>('150');
-    const [format, setFormat] = useState<Format>('jpg');
+    const [format, setFormat] = useState<Format>(defaultFormat);
     const tool = useToolRunner();
 
     const convert = () => {
@@ -54,7 +59,7 @@ export default function PdfToJpgClient() {
 
     return (
         <div className="container">
-            <ToolHeader title="PDF to JPG" subtitle="Convert each PDF page into a high-quality JPG or PNG image." />
+            <ToolHeader title={title} subtitle={subtitle} />
 
             {tool.status === 'IDLE' && !file && <FileUploader onFilesSelected={(files) => setFile(files[0] ?? null)} accept=".pdf" />}
 
