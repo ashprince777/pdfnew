@@ -29,6 +29,26 @@
     text-decoration: none;
 }
 
+.inAppWarning {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    max-width: 28rem;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.inAppWarning svg {
+    flex: none;
+    margin-top: 2px;
+}
+
 .note {
     font-size: 0.9rem;
     color: var(--text-light);

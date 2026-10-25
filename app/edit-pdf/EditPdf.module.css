@@ -62,12 +62,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
 .pageLabel {
     font-weight: 600;
     color: var(--text-color);
+}
+
+.zoomBar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-color);
+}
+
+.zoomLabel {
+    min-width: 52px;
+    padding: 6px 4px;
+    border: none;
+    background: none;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--text-color);
+    cursor: pointer;
 }
 
 .hint {
@@ -88,6 +109,8 @@
     background: var(--section-alt);
     border-radius: var(--radius);
     padding: 24px 12px 56px;
+    /* Zoomed pages scroll sideways inside this area instead of widening the whole site. */
+    overflow-x: auto;
 }
 
 /* Existing text runs: invisible until hovered, like an editor's text boxes. */

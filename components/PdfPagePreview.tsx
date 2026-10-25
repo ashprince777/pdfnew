@@ -20,7 +20,14 @@ interface PdfPagePreviewProps {
     children?: React.ReactNode;
     overlayProps?: React.HTMLAttributes<HTMLDivElement>;
     maxWidth?: number;
+    /** Magnification on top of the fitted width (1 = fit). The page then scrolls inside its container. */
+    zoom?: number;
+    /** CSS touch-action for the page (default 'none', so drags on the page never scroll it). */
+    touchAction?: React.CSSProperties['touchAction'];
 }
+
+/** Largest canvas width to render, so high zoom levels do not exhaust memory on phones. */
+const MAX_RENDER_WIDTH = 4096;
 
 /**
  * Renders one page of a PDF as an image with an overlay layer on top, sized to the
@@ -34,7 +41,10 @@ export default function PdfPagePreview({
     children,
     overlayProps,
     maxWidth = 820,
+    zoom = 1,
+    touchAction = 'none',
 }: PdfPagePreviewProps) {
+    const boxRef = useRef<HTMLDivElement | null>(null);
     const [doc, setDoc] = useState<{ file: File; proxy: PDFDocumentProxy } | null>(null);
     const [image, setImage] = useState<{ url: string; ratio: number; key: string } | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -73,7 +83,9 @@ export default function PdfPagePreview({
             const page = await activeDoc.getPage(Math.min(Math.max(1, pageNumber), activeDoc.numPages));
             const base = page.getViewport({ scale: 1 });
             callbacks.current.onPageSize?.({ width: base.width, height: base.height });
-            const scale = (maxWidth * Math.min(window.devicePixelRatio || 1, 2)) / base.width;
+            // Render for the width actually shown (zoomed), at up to 3x device pixels (sharp text on phones).
+            const shownWidth = boxRef.current?.offsetWidth || maxWidth * zoom;
+            const scale = Math.min(shownWidth * Math.min(window.devicePixelRatio || 1, 3), MAX_RENDER_WIDTH) / base.width;
             const canvas = await renderPageToCanvas(page, scale);
             const blob = await canvasToBlob(canvas, 'image/png');
             releaseCanvas(canvas);
@@ -86,7 +98,7 @@ export default function PdfPagePreview({
             cancelled = true;
             if (url) URL.revokeObjectURL(url);
         };
-    }, [activeDoc, pageNumber, maxWidth, imageKey]);
+    }, [activeDoc, pageNumber, maxWidth, zoom, imageKey]);
 
     if (error) {
         return <p role="alert" style={{ color: 'var(--error)', textAlign: 'center' }}>{error}</p>;
@@ -96,10 +108,11 @@ export default function PdfPagePreview({
 
     return (
         <div
+            ref={boxRef}
             style={{
                 position: 'relative',
-                width: '100%',
-                maxWidth,
+                width: `${zoom * 100}%`,
+                maxWidth: maxWidth * zoom,
                 margin: '0 auto',
                 aspectRatio: ready ? `1 / ${image.ratio}` : '1 / 1.414',
                 background: '#fff',
@@ -108,7 +121,7 @@ export default function PdfPagePreview({
                 borderRadius: 4,
                 overflow: 'hidden',
                 userSelect: 'none',
-                touchAction: 'none',
+                touchAction,
             }}
         >
             {ready ? (

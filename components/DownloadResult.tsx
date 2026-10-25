@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Download, CheckCircle, ArrowLeft, FileCheck, Eye, FileText, FileSpreadsheet, Presentation, Archive, FileImage, ArrowRight } from 'lucide-react';
+import { Download, CheckCircle, ArrowLeft, FileCheck, Eye, FileText, FileSpreadsheet, Presentation, Archive, FileImage, ArrowRight, Share2, AlertTriangle } from 'lucide-react';
 import { formatBytes } from '@/lib/pdf';
 import { setHandoff } from '@/lib/handoff';
 import { ALL_TOOLS } from '@/lib/tools';
@@ -26,6 +26,20 @@ const FILE_KINDS = {
     txt: { label: 'Download Text File (.txt)', icon: FileText, tint: 'var(--cat-from-pdf)' },
     other: { label: 'Download File', icon: FileCheck, tint: 'var(--text-light)' },
 } as const;
+
+/** Built-in browsers of chat and social apps, which ignore downloads of files made in the page. */
+const IN_APP_BROWSER = /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Snapchat|LinkedInApp|Line\/|MicroMessenger|; wv\)/i;
+
+const MIME_TYPES: Record<string, string> = {
+    pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    zip: 'application/zip',
+    jpg: 'image/jpeg',
+    png: 'image/png',
+    txt: 'text/plain',
+};
 
 /** Tools offered after a PDF result, in order of how often they follow each other. */
 const NEXT_TOOLS = ['/compress-pdf', '/protect-pdf', '/redact-pdf', '/sign-pdf', '/merge-pdf', '/watermark-pdf', '/add-page-numbers', '/edit-pdf', '/split-pdf', '/rotate-pdf', '/pdf-to-word'];
@@ -61,6 +75,33 @@ export default function DownloadResult({
         .slice(0, MAX_NEXT_TOOLS)
         .map((href) => ALL_TOOLS.find((t) => t.href === href))
         .filter((t): t is (typeof ALL_TOOLS)[number] => Boolean(t));
+
+    // Phones: offer the system share sheet ("Save to Files", Drive, WhatsApp...), which also works where
+    // downloads are blocked. The file is prepared up front because share() must run straight from the tap.
+    const [shareFile, setShareFile] = useState<File | null>(null);
+    // Only rendered after a file was processed in the browser, never on the server.
+    const [inAppBrowser] = useState(() => typeof navigator !== 'undefined' && IN_APP_BROWSER.test(navigator.userAgent));
+    useEffect(() => {
+        let cancelled = false;
+        if (!window.matchMedia('(pointer: coarse)').matches || typeof navigator.canShare !== 'function') return;
+        fetch(downloadUrl)
+            .then((res) => res.blob())
+            .then((blob) => {
+                const file = new File([blob], cleanFilename, { type: blob.type || MIME_TYPES[ext] || 'application/octet-stream' });
+                if (!cancelled && navigator.canShare({ files: [file] })) setShareFile(file);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [downloadUrl, cleanFilename, ext]);
+
+    const handleShare = () => {
+        if (!shareFile) return;
+        navigator.share({ files: [shareFile], title: cleanFilename }).catch(() => {
+            // Closing the share sheet rejects too; nothing to do.
+        });
+    };
 
     const handlePreview = () => {
         window.open(downloadUrl, '_blank', 'noopener');
@@ -107,7 +148,14 @@ export default function DownloadResult({
                     {kind.label}
                 </a>
 
-                {ext === 'pdf' && (
+                {shareFile && (
+                    <button type="button" onClick={handleShare} className={`btn btn-outline btn-lg ${styles.previewBtn}`}>
+                        <Share2 size={20} aria-hidden="true" />
+                        Share / Save to Files
+                    </button>
+                )}
+
+                {ext === 'pdf' && !shareFile && (
                     <button
                         type="button"
                         onClick={handlePreview}
@@ -119,6 +167,17 @@ export default function DownloadResult({
                     </button>
                 )}
             </div>
+
+            {inAppBrowser && (
+                <p className={styles.inAppWarning} role="note">
+                    <AlertTriangle size={18} aria-hidden="true" />
+                    <span>
+                        If the download does not start, this app&apos;s built-in browser is blocking it.{' '}
+                        {shareFile ? 'Use Share / Save to Files above, or open' : 'Open'} this page in Chrome or Safari (tap the &#8942; or share
+                        menu, then &quot;Open in browser&quot;) and run the tool again.
+                    </span>
+                </p>
+            )}
 
             <p className={styles.note}>
                 Your file was created in your browser and never left your device.
