@@ -1,19 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Terms of Service',
-    description: 'Terms of service for using PDFAdore online PDF tools and the Premium subscription.',
-    alternates: {
-        canonical: '/terms',
-    },
-};
+export const metadata: Metadata = pageMetadata('/terms');
 
 const link = { textDecoration: 'underline' } as const;
 
 export default function TermsPage() {
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Terms of Service', path: '/terms' }])} />
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px', display: 'grid', gap: 16 }}>
             <h1>Terms of Service</h1>
             <p className="text-muted">Last updated: {SITE.policiesUpdated}</p>
@@ -66,5 +64,6 @@ export default function TermsPage() {
                 {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: <a href={`mailto:${SITE.supportEmail}`} style={link}>{SITE.supportEmail}</a>
             </p>
         </div>
+        </>
     );
 }

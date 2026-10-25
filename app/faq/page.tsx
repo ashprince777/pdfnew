@@ -3,14 +3,9 @@ import type { Metadata } from 'next';
 import FaqSchema from '@/components/FaqSchema';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Accordion from '@/components/Accordion';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-    title: 'FAQ - Common Questions',
-    description: 'Frequently asked questions about PDFAdore. Learn about our free PDF tools, security, privacy, and how to use our services.',
-    alternates: {
-        canonical: '/faq',
-    },
-};
+export const metadata: Metadata = pageMetadata('/faq');
 
 const faqItems = [
     {

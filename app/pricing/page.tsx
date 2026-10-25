@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import PricingClient from './PricingClient';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Pricing - Free & Premium Plans',
-    description: 'PDFAdore is free for everyday PDF tasks. Premium unlocks bigger files, more files per task, OCR and pro features. Your files never leave your device.',
-    alternates: { canonical: '/pricing' },
-};
+export const metadata: Metadata = pageMetadata('/pricing');
 
 export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     const params = await searchParams;
-    return <PricingClient initialInterval={params.interval === 'monthly' ? 'monthly' : 'yearly'} autoCheckout={params.checkout === '1'} />;
+    return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Pricing', path: '/pricing' }])} />
+            <PricingClient initialInterval={params.interval === 'monthly' ? 'monthly' : 'yearly'} autoCheckout={params.checkout === '1'} />
+        </>
+    );
 }

@@ -1,14 +1,9 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-    title: 'File Deletion Policy',
-    description: 'Learn how PDFAdore handles your files. We prioritize your privacy with strict file deletion policies.',
-    alternates: {
-        canonical: '/deletion-policy',
-    },
-};
+export const metadata: Metadata = pageMetadata('/deletion-policy');
 
 export default function DeletionPolicyPage() {
     return (

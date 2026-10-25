@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Privacy Policy',
-    description: 'How PDFAdore collects, uses and protects your data, including data received through Google Sign-In. PDF processing happens in your browser and your files are never uploaded.',
-    alternates: {
-        canonical: '/privacy',
-    },
-};
+export const metadata: Metadata = pageMetadata('/privacy');
 
 const LAST_UPDATED = 'October 22, 2026';
 const link = { textDecoration: 'underline' } as const;
@@ -16,6 +12,8 @@ const link = { textDecoration: 'underline' } as const;
 export default function PrivacyPage() {
     const email = <a href={`mailto:${SITE.supportEmail}`} style={link}>{SITE.supportEmail}</a>;
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Privacy Policy', path: '/privacy' }])} />
         <div className="container legal" style={{ padding: '60px 20px', maxWidth: '820px', display: 'grid', gap: 14 }}>
             <h1>Privacy Policy</h1>
             <p className="text-muted">Last updated: {LAST_UPDATED}</p>
@@ -153,5 +151,6 @@ export default function PrivacyPage() {
                 For privacy questions, requests or complaints, contact our Grievance Officer: {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: {email}.
             </p>
         </div>
+        </>
     );
 }

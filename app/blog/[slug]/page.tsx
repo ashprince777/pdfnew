@@ -5,7 +5,8 @@ import { ArrowRight } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import { ARTICLES, getArticle, type Block } from '@/lib/blog';
-import { SITE } from '@/lib/site';
+import JsonLd from '@/components/JsonLd';
+import { articleSchema, BLOG_SEO, pageMetadata } from '@/lib/seo';
 import styles from '../Blog.module.css';
 
 export const dynamicParams = false;
@@ -17,12 +18,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const article = getArticle((await params).slug);
     if (!article) return {};
-    return {
-        title: article.title,
-        description: article.description,
-        alternates: { canonical: `/blog/${article.slug}` },
-        openGraph: { type: 'article', title: article.title, description: article.description, publishedTime: article.published },
-    };
+    const seo = BLOG_SEO[article.slug];
+    return pageMetadata(`/blog/${article.slug}`, {
+        title: seo?.title ?? article.title,
+        description: seo?.description ?? article.description,
+        type: 'article',
+        publishedTime: article.published,
+    });
 }
 
 function renderBlock(block: Block, i: number) {
@@ -62,21 +64,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     const article = getArticle((await params).slug);
     if (!article) notFound();
     const related = ARTICLES.filter((a) => a.slug !== article.slug).slice(0, 3);
-    const jsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: article.title,
-        description: article.description,
-        datePublished: article.published,
-        dateModified: article.published,
-        author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
-        publisher: { '@type': 'Organization', name: SITE.name, logo: { '@type': 'ImageObject', url: `${SITE.url}/brand/pdfadore-icon-512.png` } },
-        mainEntityOfPage: `${SITE.url}/blog/${article.slug}`,
-    };
+    const jsonLd = articleSchema(article);
 
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <JsonLd data={jsonLd} />
             <BreadcrumbSchema items={[{ name: 'Home', item: '/' }, { name: 'Blog', item: '/blog' }, { name: article.title, item: `/blog/${article.slug}` }]} />
             {article.faq.length > 0 && <FaqSchema items={article.faq} />}
 

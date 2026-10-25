@@ -3,17 +3,15 @@ import ToolCard from '@/components/ToolCard';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { ALL_TOOLS, CATEGORIES } from '@/lib/tools';
 import styles from '../page.module.css';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'All PDF Tools',
-    description: 'Every free PDFAdore tool in one place: merge, split, compress, convert, edit, sign and secure PDFs in your browser.',
-    alternates: {
-        canonical: '/all-tools',
-    },
-};
+export const metadata: Metadata = pageMetadata('/all-tools');
 
 export default function AllToolsPage() {
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'All PDF Tools', path: '/all-tools' }])} />
         <div className="container" style={{ padding: '40px 16px 80px' }}>
             <div className="text-center mb-10">
                 <div style={{ marginBottom: '16px' }}>
@@ -76,5 +74,6 @@ export default function AllToolsPage() {
                 );
             })}
         </div>
+        </>
     );
 }

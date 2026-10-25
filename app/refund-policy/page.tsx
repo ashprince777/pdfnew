@@ -2,15 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
 import { CURRENCY_SYMBOL, PREMIUM_PRICES_INR, TRIAL_DAYS } from '@/lib/plans';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Cancellation & Refund Policy',
-    description: 'How cancellations and refunds work for PDFAdore Premium subscriptions.',
-    alternates: { canonical: '/refund-policy' },
-};
+export const metadata: Metadata = pageMetadata('/refund-policy');
 
 export default function RefundPolicyPage() {
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Cancellation & Refund Policy', path: '/refund-policy' }])} />
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px', display: 'grid', gap: 16 }}>
             <h1>Cancellation &amp; Refund Policy</h1>
             <p className="text-muted">Last updated: {SITE.policiesUpdated}</p>
@@ -56,5 +56,6 @@ export default function RefundPolicyPage() {
                 {SITE.legalName}, {SITE.address}. Phone: {SITE.phone}. Email: <a href={`mailto:${SITE.supportEmail}`} style={{ textDecoration: 'underline' }}>{SITE.supportEmail}</a>
             </p>
         </div>
+        </>
     );
 }

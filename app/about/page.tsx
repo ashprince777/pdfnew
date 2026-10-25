@@ -1,15 +1,13 @@
 import type { Metadata } from 'next';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'About Us',
-    description: 'PDFAdore offers free, private PDF tools that run entirely in your browser.',
-    alternates: {
-        canonical: '/about',
-    },
-};
+export const metadata: Metadata = pageMetadata('/about');
 
 export default function AboutPage() {
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }])} />
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px' }}>
             <h1>About PDFAdore</h1>
             <p className="lead">We make working with PDFs easy.</p>
@@ -24,5 +22,6 @@ export default function AboutPage() {
                 we perform most operations directly on your device, ensuring your documents remain secure.
             </p>
         </div>
+        </>
     );
 }

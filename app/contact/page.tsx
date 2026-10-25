@@ -4,14 +4,9 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Mail } from 'lucide-react';
 import ContactForm from '@/components/ContactForm';
 import { SITE } from '@/lib/site';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-    title: 'Contact Us',
-    description: 'Get in touch with the PDFAdore team. We are here to help with any questions or feedback.',
-    alternates: {
-        canonical: '/contact',
-    },
-};
+export const metadata: Metadata = pageMetadata('/contact');
 
 export default function ContactPage() {
     return (

@@ -2,16 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
 import { CURRENCY_SYMBOL, PREMIUM_PRICES_INR } from '@/lib/plans';
+import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = {
-    title: 'Shipping & Delivery Policy',
-    description: 'PDFAdore is a digital service delivered instantly online. Nothing is shipped.',
-    alternates: { canonical: '/shipping-policy' },
-};
+export const metadata: Metadata = pageMetadata('/shipping-policy');
 
 export default function ShippingPolicyPage() {
     const link = { textDecoration: 'underline' } as const;
     return (
+        <>
+            <JsonLd data={breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Shipping & Delivery Policy', path: '/shipping-policy' }])} />
         <div className="container" style={{ padding: '60px 20px', maxWidth: '800px', display: 'grid', gap: 16 }}>
             <h1>Shipping &amp; Delivery Policy</h1>
             <p className="text-muted">Last updated: {SITE.policiesUpdated}</p>
@@ -50,5 +50,6 @@ export default function ShippingPolicyPage() {
                 <a href={`mailto:${SITE.supportEmail}`} style={link}>{SITE.supportEmail}</a>
             </p>
         </div>
+        </>
     );
 }

@@ -1,10 +1,16 @@
 import Hero from '@/components/Hero';
 import HomeToolGrid from '@/components/HomeToolGrid';
 import styles from './page.module.css';
+import type { Metadata } from 'next';
+import JsonLd from '@/components/JsonLd';
+import { organizationSchema, pageMetadata, websiteSchema } from '@/lib/seo';
+
+export const metadata: Metadata = pageMetadata('/');
 
 export default function Home() {
   return (
     <>
+      <JsonLd data={[organizationSchema(), websiteSchema()]} />
       <Hero />
       <HomeToolGrid />
 
