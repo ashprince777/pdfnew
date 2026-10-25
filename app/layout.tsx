@@ -22,25 +22,25 @@ export const metadata: Metadata = {
     template: '%s | PDFAdore',
   },
   description: 'Free, fast, and secure online PDF tools. Merge, split, compress, protect, and convert PDFs directly in your browser. No registration required.',
-  keywords: ['pdf tools', 'merge pdf', 'split pdf', 'compress pdf', 'convert pdf', 'free pdf editor', 'unlock pdf', 'protect pdf'],
   authors: [{ name: SITE.name }],
   creator: SITE.name,
   publisher: SITE.name,
   alternates: {
     canonical: './',
   },
+  // Fallbacks only: every public page sets its own Open Graph and Twitter tags via pageMetadata() in lib/seo.ts.
   openGraph: {
-    title: 'PDFAdore - All-in-One PDF Tools',
-    description: 'Merge, split, compress, and convert PDFs for free. Secure, client-side processing.',
-    url: SITE.url,
     siteName: SITE.name,
     type: 'website',
-    locale: 'en_US',
+    locale: 'en_IN',
   },
   twitter: {
     card: 'summary_large_image',
-    title: SITE.name,
-    description: 'Free & Secure Online PDF Tools'
+  },
+  // Search Console / Bing Webmaster verification: set these in Vercel to add the meta tags.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } : undefined,
   },
   robots: {
     index: true,
