@@ -188,6 +188,18 @@ export default function EditPdfClient() {
     }, []);
     useEffect(() => releaseFile, [releaseFile]);
 
+    // A click outside the page (margins, headings, toolbar) also closes the open edit.
+    useEffect(() => {
+        if (selectedId === null) return;
+        const closeOnOutsideClick = (e: MouseEvent) => {
+            if (overlayRef.current?.contains(e.target as Node)) return;
+            setAnnotations((prev) => prev.filter((a) => !(a.id === selectedId && a.kind === 'text' && !a.text.trim())));
+            setSelectedId(null);
+        };
+        document.addEventListener('click', closeOnOutsideClick);
+        return () => document.removeEventListener('click', closeOnOutsideClick);
+    }, [selectedId]);
+
     const getAnalysis = useCallback(async (pageNumber: number): Promise<PageAnalysis | null> => {
         const cached = analyses.current.get(pageNumber);
         if (cached) return cached;
@@ -276,16 +288,20 @@ export default function EditPdfClient() {
      * Mouse and pen act on press; touch acts on tap (click), which the browser only fires when the finger
      * did not scroll or pinch. Spread onto anything that selects or opens an editor.
      */
-    const tapProps = (action: (e: React.SyntheticEvent) => void) => ({
-        onPointerDown: (e: React.PointerEvent) => {
-            e.stopPropagation();
-            if (e.pointerType !== 'touch') action(e);
-        },
-        onClick: (e: React.MouseEvent) => {
-            e.stopPropagation();
-            if (pointerType.current === 'touch') action(e);
-        },
-    });
+    const tapProps = (action: (e: React.SyntheticEvent) => void) => {
+        // While an edit is open, the first click anywhere only closes it; the next click opens the new one.
+        const run = (e: React.SyntheticEvent) => (selectedId !== null ? deselect() : action(e));
+        return {
+            onPointerDown: (e: React.PointerEvent) => {
+                e.stopPropagation();
+                if (e.pointerType !== 'touch') run(e);
+            },
+            onClick: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                if (pointerType.current === 'touch') run(e);
+            },
+        };
+    };
 
     const onOverlayPointerDownCapture = (e: React.PointerEvent<HTMLDivElement>) => {
         pointerType.current = e.pointerType;
@@ -366,7 +382,6 @@ export default function EditPdfClient() {
 
     const editSegment = async (e: React.SyntheticEvent, segment: TextSegment) => {
         e.stopPropagation();
-        if (selectedId !== null) deselect();
         const W = pageSize.width;
         const H = pageSize.height;
         const box = { x: segment.x / W, y: segment.top / H, w: segment.width / W, h: segment.height / H };
