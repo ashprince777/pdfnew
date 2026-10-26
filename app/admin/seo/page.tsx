@@ -6,7 +6,7 @@ import { isAdminEmail } from '@/lib/admin';
 import { isGscConfigured, isoDay } from '@/lib/seoBot/gsc';
 import { TARGET_KEYWORDS } from '@/lib/seoBot/keywords';
 import { CTR_RATIO, MIN_IMPRESSIONS, expectedCtr, needsRewrite } from '@/lib/seoBot/rules';
-import type { RunSummary } from '@/lib/seoBot/run';
+import { STEP_ORDER, type RunSummary } from '@/lib/seoBot/run';
 import Tile from '../Tile';
 import RunNowButton from './RunNowButton';
 import { runSeoBotNow, undoSeoChange } from './actions';
@@ -148,7 +148,9 @@ export default async function SeoAdminPage() {
                             {fmtTime(lastRun.started_at)} IST · <Badge status={lastRun.status} /> · {lastRun.summary?.trigger === 'manual' ? 'started from this page' : 'daily schedule'}
                         </p>
                         <ul className={seo.steps}>
-                            {Object.entries(lastRun.summary?.steps ?? {}).map(([name, s]) => (
+                            {Object.entries(lastRun.summary?.steps ?? {})
+                                .sort(([a], [b]) => STEP_ORDER.indexOf(a) - STEP_ORDER.indexOf(b))
+                                .map(([name, s]) => (
                                 <li key={name}>
                                     <Badge status={s.status} /> <strong>{name}</strong>: {s.note}
                                 </li>

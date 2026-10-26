@@ -18,6 +18,9 @@ const INDEXNOW_KEY = '54a8e380c82e43f0a6321d74b036e357';
 /** New ranking updates explained by AI per run (keeps within Groq's free per-minute allowance). */
 const MAX_UPDATE_NOTES = 3;
 
+/** Steps in the order they run (the database does not keep the order of JSON keys). */
+export const STEP_ORDER = ['Search Console', 'Check earlier changes', 'Rewrite titles', 'Site audit', 'Google updates', 'Keyword ideas'];
+
 export interface StepResult {
     status: 'ok' | 'failed' | 'skipped';
     note: string;
@@ -108,9 +111,10 @@ export async function runSeoBot(trigger: RunSummary['trigger']): Promise<{ runId
     await step('Search Console', async () => {
         if (!isGscConfigured()) return { status: 'skipped', note: 'Not connected yet: add GSC_CLIENT_EMAIL and GSC_PRIVATE_KEY in Vercel.' };
         const [daily, pages, queries] = await gscQueries([
+            // dataState 'all' includes the freshest (still provisional) days, so totals match the daily rows.
             { startDate: isoDay(6), endDate: isoDay(1), dimensions: ['date', 'query', 'page'] },
-            { startDate: isoDay(30), endDate: isoDay(3), dimensions: ['page'] },
-            { startDate: isoDay(30), endDate: isoDay(3), dimensions: ['page', 'query'], rowLimit: 5000 },
+            { startDate: isoDay(28), endDate: isoDay(1), dimensions: ['page'] },
+            { startDate: isoDay(28), endDate: isoDay(1), dimensions: ['page', 'query'], rowLimit: 5000 },
         ]);
         const rows = daily
             .map((r) => ({ day: r.keys[0], query: r.keys[1], page: toPath(r.keys[2]), clicks: r.clicks, impressions: r.impressions, position: r.position }))
