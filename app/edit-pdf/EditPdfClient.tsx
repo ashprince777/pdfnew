@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { rgb, BlendMode, type PDFDocument } from '@cantoo/pdf-lib';
+import { rgb, BlendMode, StandardFonts, type PDFDocument, type PDFFont } from '@cantoo/pdf-lib';
 import { Type, Highlighter, ArrowRight, Trash2, Eraser, ChevronLeft, ChevronRight, ImageUp, ScanText, Undo2, Bold, Minus, Plus, Move, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
@@ -10,7 +10,7 @@ import PdfPagePreview, { type PageSize } from '@/components/PdfPagePreview';
 import { ToolHeader, SelectedFile, Notice, toolStyles } from '@/components/ToolUI';
 import { baseName, embedUnicodeFont, getVisualFrame, hexToRgbComponents, loadPdf, PdfToolError, savePdf, toDrawableText } from '@/lib/pdf';
 import { openPdfjsDocument } from '@/lib/pdfjs';
-import { analyzePage, ocrPage, rgbToHex, sampleColors, type PageAnalysis, type TextSegment } from '@/lib/pageAnalysis';
+import { analyzePage, ocrPage, rgbToHex, sampleColors, type FontFamily, type PageAnalysis, type TextSegment } from '@/lib/pageAnalysis';
 import { drawnAspect, findPageImages, replacePageImage } from '@/lib/pageContent';
 import { removeTextInBoxes, type UserBox } from '@/lib/textRemoval';
 import { whiteoutImagesInBoxes } from '@/lib/imageWhiteout';
@@ -41,6 +41,9 @@ type Annotation =
           baseline: number;
           text: string;
           background: string;
+          /** Style of the original font; edited text is drawn in the matching standard font. */
+          family: FontFamily;
+          italic: boolean;
           original: { text: string } & TextStyle;
       } & TextStyle)
     | { id: number; kind: 'image'; page: number; name: string; aspect: number; file: File; url: string };
@@ -60,6 +63,23 @@ interface ImageBox {
 const NOTO_ASCENDER = 1.069;
 const NOTO_DESCENDER = 0.293;
 const BASELINE_OFFSET_EM = NOTO_ASCENDER + (1 - (NOTO_ASCENDER + NOTO_DESCENDER)) / 2;
+
+/**
+ * Preview fonts for replaced text, matching the standard PDF fonts used when saving
+ * (Arial ~ Helvetica, Times New Roman ~ Times, Courier New ~ Courier; Liberation fonts on Linux).
+ * `baseline` is the same line-height: 1 baseline offset as above, from each font's metrics.
+ */
+const PREVIEW_FONTS: Record<FontFamily, { css: string; baseline: number }> = {
+    sans: { css: 'Arial, Helvetica, "Liberation Sans", sans-serif', baseline: 0.905 + (1 - (0.905 + 0.212)) / 2 },
+    serif: { css: '"Times New Roman", Times, "Liberation Serif", serif', baseline: 0.891 + (1 - (0.891 + 0.216)) / 2 },
+    mono: { css: '"Courier New", Courier, "Liberation Mono", monospace', baseline: 0.8325 + (1 - (0.8325 + 0.3003)) / 2 },
+};
+
+const STANDARD_FONTS: Record<FontFamily, [regular: StandardFonts, bold: StandardFonts, italic: StandardFonts, boldItalic: StandardFonts]> = {
+    sans: [StandardFonts.Helvetica, StandardFonts.HelveticaBold, StandardFonts.HelveticaOblique, StandardFonts.HelveticaBoldOblique],
+    serif: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold, StandardFonts.TimesRomanItalic, StandardFonts.TimesRomanBoldItalic],
+    mono: [StandardFonts.Courier, StandardFonts.CourierBold, StandardFonts.CourierOblique, StandardFonts.CourierBoldOblique],
+};
 /** Replacement text may run this much wider than the original before it is scaled down to fit. */
 const MAX_TEXT_GROWTH = 1.25;
 const ANALYSIS_CACHE_SIZE = 3;
@@ -403,6 +423,8 @@ export default function EditPdfClient() {
                     baseline: segment.baseline / H,
                     text: segment.text,
                     background: colors ? rgbToHex(colors.background) : '#ffffff',
+                    family: segment.family,
+                    italic: segment.italic,
                     original: { text: segment.text, ...style },
                     ...style,
                 },
@@ -477,6 +499,16 @@ export default function EditPdfClient() {
             const pdfDoc = await loadPdf(file);
             const bold = await embedUnicodeFont(pdfDoc, 'bold');
             const regular = await embedUnicodeFont(pdfDoc, 'regular');
+            const standardFonts = new Map<StandardFonts, Promise<PDFFont>>();
+            /** The standard font of the original's style, or Noto Sans when the text has characters it cannot draw (e.g. ₹, Hindi). */
+            const matchingFont = async (ann: Extract<Annotation, { kind: 'replace' }>): Promise<PDFFont> => {
+                const name = STANDARD_FONTS[ann.family][(ann.bold ? 1 : 0) + (ann.italic ? 2 : 0)];
+                if (!standardFonts.has(name)) standardFonts.set(name, pdfDoc.embedFont(name));
+                const font = await standardFonts.get(name)!;
+                const supported = new Set(font.getCharacterSet());
+                const drawable = [...ann.text.replace(/\t/g, ' ')].every((c) => c.codePointAt(0)! < 32 || supported.has(c.codePointAt(0)!));
+                return drawable ? font : ann.bold ? bold : regular;
+            };
 
             // First really delete the original text under replaced text and whiteout boxes, so it
             // can't be copied, searched or recovered from the file. This must run before anything
@@ -538,8 +570,8 @@ export default function EditPdfClient() {
                         color: rgb(br, bg, bb),
                         rotate: frame.rotate,
                     });
-                    // ...then write the new text on the same baseline.
-                    const font = ann.bold ? bold : regular;
+                    // ...then write the new text on the same baseline, in the font closest to the original.
+                    const font = await matchingFont(ann);
                     const text = toDrawableText(font, ann.text);
                     if (!text.trim()) continue;
                     const maxWidth = ann.w * W * MAX_TEXT_GROWTH;
@@ -805,7 +837,9 @@ export default function EditPdfClient() {
                                 }
                                 if (ann.kind === 'replace') {
                                     const fontPx = ann.size * pxPerPt;
-                                    const textTopPx = ann.baseline * displayHeight - fontPx * BASELINE_OFFSET_EM;
+                                    const previewFont = PREVIEW_FONTS[ann.family];
+                                    const textTopPx = ann.baseline * displayHeight - fontPx * previewFont.baseline;
+                                    const fontStyle = { fontFamily: previewFont.css, fontStyle: ann.italic ? 'italic' : undefined };
                                     const changed = isReplaceChanged(ann);
                                     return (
                                         <React.Fragment key={ann.id}>
@@ -837,6 +871,7 @@ export default function EditPdfClient() {
                                                             fontWeight: ann.bold ? 700 : 400,
                                                             color: ann.color,
                                                             background: ann.background,
+                                                            ...fontStyle,
                                                         }}
                                                     />
                                                 </>
@@ -848,7 +883,7 @@ export default function EditPdfClient() {
                                                             setSelectedId(ann.id);
                                                             focusInline();
                                                         })}
-                                                        style={{ left: `${ann.x * 100}%`, top: textTopPx, fontSize: fontPx, fontWeight: ann.bold ? 700 : 400, color: ann.color }}
+                                                        style={{ left: `${ann.x * 100}%`, top: textTopPx, fontSize: fontPx, fontWeight: ann.bold ? 700 : 400, color: ann.color, ...fontStyle }}
                                                     >
                                                         {ann.text}
                                                     </span>
@@ -923,7 +958,7 @@ export default function EditPdfClient() {
                     </div>
 
                     <p className={styles.footnote}>
-                        Edited text uses Noto Sans in the original size and colour. Replaced text, whited-out text (also on scanned pages) and replaced images are fully removed from the file.
+                        Edited text keeps the original font style (sans, serif or typewriter), size and colour. Replaced text, whited-out text (also on scanned pages) and replaced images are fully removed from the file.
                     </p>
 
                     <div className={styles.applyBar}>

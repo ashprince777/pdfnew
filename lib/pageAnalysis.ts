@@ -3,6 +3,9 @@ import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { Worker as OcrWorker } from 'tesseract.js';
 import { getPdfjs, renderPageToCanvas } from './pdfjs';
 
+/** Broad style of the original font, used to pick the closest standard font for edited text. */
+export type FontFamily = 'sans' | 'serif' | 'mono';
+
 /** An editable run of text, in displayed page points (origin top-left). */
 export interface TextSegment {
     text: string;
@@ -15,6 +18,8 @@ export interface TextSegment {
     /** Font size in points. */
     size: number;
     bold: boolean;
+    family: FontFamily;
+    italic: boolean;
 }
 
 export interface PageAnalysis {
@@ -38,6 +43,26 @@ interface Item {
     width: number;
     size: number;
     bold: boolean;
+    family: FontFamily;
+    italic: boolean;
+}
+
+/** What pdf.js knows about a loaded font (only the fields used here). */
+interface LoadedFont {
+    name?: string;
+    isMonospace?: boolean;
+    isSerifFont?: boolean;
+    italic?: boolean;
+}
+
+/** Classifies a font as sans, serif or monospace from pdf.js flags and its PostScript name. */
+function classifyFont(font: LoadedFont | undefined): { family: FontFamily; italic: boolean } {
+    const name = font?.name ?? '';
+    const italic = Boolean(font?.italic) || /italic|oblique/i.test(name);
+    if (font?.isMonospace || /courier|mono|consol|menlo|typewriter|lucidaconsole/i.test(name)) return { family: 'mono', italic };
+    if (/sans|arial|helvet|calibri|verdana|tahoma|segoe|roboto|gothic|univers|futura/i.test(name)) return { family: 'sans', italic };
+    if (font?.isSerifFont || /times|serif|roman|georgia|garamond|cambria|book|palatino|minion/i.test(name)) return { family: 'serif', italic };
+    return { family: 'sans', italic };
 }
 
 function toSegment(items: Item[]): TextSegment {
@@ -53,7 +78,7 @@ function toSegment(items: Item[]): TextSegment {
         lastRight = item.x + item.width;
     }
     const top = baseline - size * 0.92;
-    return { text: text.replace(/\s+/g, ' ').trim(), x, top, width: right - x, height: size * 1.2, baseline, size, bold: items.some((i) => i.bold) };
+    return { text: text.replace(/\s+/g, ' ').trim(), x, top, width: right - x, height: size * 1.2, baseline, size, bold: items.some((i) => i.bold), family: items[0].family, italic: items[0].italic };
 }
 
 /** Groups items into lines, then splits lines into segments at column-sized gaps (table cells stay separate). */
@@ -98,12 +123,13 @@ export async function analyzePage(doc: PDFDocumentProxy, pageNumber: number): Pr
         const m = Util.transform(viewport.transform, item.transform);
         // Only horizontal, left-to-right text can be edited in place.
         if (m[0] <= 0 || Math.abs(m[1]) > Math.abs(m[0]) * 0.05) continue;
-        let fontName = '';
+        let font: LoadedFont | undefined;
         try {
-            if (page.commonObjs.has(item.fontName)) fontName = (page.commonObjs.get(item.fontName) as { name?: string })?.name ?? '';
+            if (page.commonObjs.has(item.fontName)) font = page.commonObjs.get(item.fontName) as LoadedFont;
         } catch {
-            // font not loaded; treat as regular
+            // font not loaded; treat as regular sans
         }
+        const fontName = font?.name ?? '';
         items.push({
             str: item.str,
             x: m[4],
@@ -111,6 +137,7 @@ export async function analyzePage(doc: PDFDocumentProxy, pageNumber: number): Pr
             width: item.width,
             size: Math.hypot(m[2], m[3]) || item.height || 10,
             bold: /bold|black|heavy|semibold|demi/i.test(fontName),
+            ...classifyFont(font),
         });
     }
 
@@ -176,6 +203,8 @@ export async function ocrPage(analysis: PageAnalysis, onProgress?: (value: numbe
                             baseline: baseY / s,
                             size,
                             bold: false,
+                            family: 'sans',
+                            italic: false,
                         });
                         group = [];
                     };
