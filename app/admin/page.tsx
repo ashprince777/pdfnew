@@ -4,6 +4,9 @@ import { getCurrentUser, getSupabaseAdmin } from '@/lib/supabase/server';
 import { isPremium, isInTrial, type SubscriptionRow } from '@/lib/billing/entitlement';
 import { CURRENCY_SYMBOL } from '@/lib/plans';
 import { SITE } from '@/lib/site';
+import Link from 'next/link';
+import { isAdminEmail } from '@/lib/admin';
+import Tile from './Tile';
 import styles from './Admin.module.css';
 
 export const metadata: Metadata = {
@@ -12,13 +15,6 @@ export const metadata: Metadata = {
 };
 // Always fresh numbers.
 export const dynamic = 'force-dynamic';
-
-/** Comma-separated list of emails allowed to see this page (Vercel env ADMIN_EMAILS). */
-const adminEmails = () =>
-    (process.env.ADMIN_EMAILS ?? '')
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
 
 interface AdminUser {
     id: string;
@@ -45,19 +41,9 @@ async function loadUsers(admin: ReturnType<typeof getSupabaseAdmin>): Promise<Ad
     return users;
 }
 
-function Tile({ label, value, note }: { label: string; value: string | number; note?: string }) {
-    return (
-        <div className={styles.tile}>
-            <p className={styles.tileLabel}>{label}</p>
-            <p className={styles.tileValue}>{value}</p>
-            {note && <p className={styles.tileNote}>{note}</p>}
-        </div>
-    );
-}
-
 export default async function AdminPage() {
     const user = await getCurrentUser();
-    if (!user?.email || !adminEmails().includes(user.email.toLowerCase())) notFound();
+    if (!isAdminEmail(user?.email)) notFound();
 
     const admin = getSupabaseAdmin();
     const now = new Date();
@@ -118,6 +104,10 @@ export default async function AdminPage() {
                 <p className={styles.muted}>
                     {`${SITE.name} · updated ${now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })} IST`}
                 </p>
+                <nav className={styles.subnav} aria-label="Admin sections">
+                    <span aria-current="page">Overview</span>
+                    <Link href="/admin/seo">SEO bot</Link>
+                </nav>
             </header>
 
             <h2 className={styles.section}>Users</h2>

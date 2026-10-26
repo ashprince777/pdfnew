@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
 import { CURRENCY_SYMBOL, PREMIUM_PRICES_INR, TRIAL_DAYS } from '@/lib/plans';
-import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import { breadcrumbSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/refund-policy');
+export const generateMetadata = () => seoMetadata('/refund-policy');
 
 export default function RefundPolicyPage() {
     return (

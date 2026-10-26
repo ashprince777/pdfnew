@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import JsonLd from '@/components/JsonLd';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 import JpgToPdfClient from '../jpg-to-pdf/JpgToPdfClient';
 
-export const metadata: Metadata = pageMetadata('/png-to-pdf');
+export const generateMetadata = () => seoMetadata('/png-to-pdf');
 
 const faqItems = [
     {

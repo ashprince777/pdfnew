@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import RemovePagesClient from './RemovePagesClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/remove-pages');
+export const generateMetadata = () => seoMetadata('/remove-pages');
 
 const faqItems = [
     {

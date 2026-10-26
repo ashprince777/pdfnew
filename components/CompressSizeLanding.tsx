@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import Link from 'next/link';
 import CompressClient from '@/app/compress-pdf/CompressClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import { SIZE_PRESETS_KB, sizeLabel, sizeSlug } from '@/lib/compressSizes';
 import JsonLd from '@/components/JsonLd';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 
 /** Where each size limit typically comes up, so every landing page has its own useful copy. */
 const USE_CASES: Record<number, string> = {
@@ -21,8 +22,8 @@ const USE_CASES: Record<number, string> = {
     2048: 'A 2 MB limit is common for tender documents, court e-filing, insurance claims and longer reports that you need to email or upload in one file.',
 };
 
-export function compressSizeMetadata(kb: number): Metadata {
-    return pageMetadata(`/compress-pdf-to-${sizeSlug(kb)}`);
+export function compressSizeMetadata(kb: number): Promise<Metadata> {
+    return seoMetadata(`/compress-pdf-to-${sizeSlug(kb)}`);
 }
 
 export default function CompressSizeLanding({ kb }: { kb: number }) {

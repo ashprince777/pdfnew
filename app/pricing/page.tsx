@@ -1,9 +1,9 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import PricingClient from './PricingClient';
-import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import { breadcrumbSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/pricing');
+export const generateMetadata = () => seoMetadata('/pricing');
 
 export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     const params = await searchParams;

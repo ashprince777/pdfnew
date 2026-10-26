@@ -23,6 +23,42 @@ const store = {
     payments: [],
     trial_claims: [],
     ai_usage: [],
+    // SEO bot tables (supabase/migrations/0004_seo_bot.sql), with one day of sample data.
+    seo_overrides: [{ path: '/split-pdf', title: 'Split PDF by Page Range Free - Test Override | PDFAdore', description: 'Override description set by the SEO bot in the tests.' }],
+    seo_runs: [
+        {
+            id: 1,
+            started_at: new Date().toISOString(),
+            finished_at: new Date().toISOString(),
+            status: 'ok',
+            summary: {
+                trigger: 'cron',
+                steps: { 'Search Console': { status: 'ok', note: '3 daily rows saved.' }, 'Site audit': { status: 'ok', note: '66 pages checked: 0 errors, 1 warnings.' } },
+                audit: { checked: 66, issues: [{ url: 'https://www.pdfadore.com/faq', severity: 'warning', message: 'Title is only 20 characters' }] },
+            },
+        },
+    ],
+    seo_query_stats: [
+        { day: new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10), query: 'merge pdf', page: '/merge-pdf', clicks: 4, impressions: 220, position: 8.4 },
+        { day: new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10), query: 'compress pdf to 300kb', page: '/compress-pdf-to-300kb', clicks: 9, impressions: 140, position: 5.2 },
+    ],
+    seo_changes: [
+        {
+            id: 1,
+            path: '/merge-pdf',
+            old_title: 'Merge PDF Online Free - Combine PDFs | PDFAdore',
+            new_title: 'Merge PDF Files Online Free in Seconds | PDFAdore',
+            new_description: 'Combine PDF files into one in seconds.',
+            reason: 'Searchers use "merge pdf files".',
+            status: 'live',
+            note: null,
+            created_at: new Date().toISOString(),
+            before: { ctr: 0.01, position: 8.4, impressions: 220 },
+            after: null,
+        },
+    ],
+    seo_updates: [{ id: 'status:x', source: 'status', title: 'October 2026 core update', url: 'https://status.search.google.com/', published_at: new Date().toISOString(), ended_at: null, note: 'A broad core update.' }],
+    seo_keywords: [{ keyword: 'compress pdf below 100kb', seed: 'compress pdf', covered: false, first_seen: new Date().toISOString().slice(0, 10) }],
 };
 /** Bodies of the requests the app sent to the Groq API, newest last. */
 const aiRequests = [];
@@ -112,13 +148,13 @@ http.createServer(async (req, res) => {
         return send(res, 200, row.used);
     }
 
-    const match = url.pathname.match(/^\/rest\/v1\/(subscriptions|payments|trial_claims|ai_usage)$/);
+    const match = url.pathname.match(/^\/rest\/v1\/(subscriptions|payments|trial_claims|ai_usage|seo_overrides|seo_runs|seo_query_stats|seo_changes|seo_updates|seo_keywords)$/);
     if (match) {
         const table = match[1];
         const isService = token === 'service-role-key';
         const requester = USERS[token];
         // Emulate row-level security: users only see their own rows; service role sees all.
-        const visible = (rows) => (isService ? rows : rows.filter((r) => requester && r.user_id === requester.id));
+        const visible = (rows) => (isService || table === 'seo_overrides' ? rows : rows.filter((r) => requester && r.user_id === requester.id));
         if (req.method === 'GET') {
             const rows = visible(filterRows(table, url.searchParams));
             const single = (req.headers.accept || '').includes('vnd.pgrst.object');

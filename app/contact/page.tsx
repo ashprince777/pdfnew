@@ -1,12 +1,11 @@
 import React from 'react';
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Mail } from 'lucide-react';
 import ContactForm from '@/components/ContactForm';
 import { SITE } from '@/lib/site';
-import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = pageMetadata('/contact');
+export const generateMetadata = () => seoMetadata('/contact');
 
 export default function ContactPage() {
     return (

@@ -193,3 +193,28 @@
     color: var(--primary);
     font-weight: 600;
 }
+
+.subnav {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+
+.subnav a,
+.subnav span {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+}
+
+.subnav a {
+    color: var(--primary);
+}
+
+.subnav [aria-current='page'] {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}

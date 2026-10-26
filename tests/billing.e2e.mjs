@@ -333,6 +333,31 @@ await check('admin dashboard: admin sees numbers, others get 404', async () => {
     await other.context().close();
 });
 
+await check('seo bot: dashboard for admin, live title override on pages', async () => {
+    const page = await pageAs('premium-token');
+    const res = await page.goto(`${APP}/admin/seo`, { waitUntil: 'networkidle' });
+    assert(res.status() === 200, `admin got ${res.status()}`);
+    await page.getByRole('heading', { name: 'SEO bot', level: 1 }).waitFor({ timeout: 10000 });
+    for (const text of ['Target keywords', 'Top searches', 'Automatic title changes', 'Merge PDF Files Online Free in Seconds | PDFAdore', 'October 2026 core update', 'compress pdf below 100kb', 'Title is only 20 characters']) {
+        assert(await page.getByText(text).first().isVisible(), `missing ${text}`);
+    }
+    assert(await page.getByRole('button', { name: 'Undo' }).isVisible(), 'no Undo button for a live change');
+    await page.screenshot({ path: `${OUTPUT}/admin-seo.png`, fullPage: true });
+    assert(!page.errors.length, page.errors.join(' | '));
+    await page.context().close();
+    const other = await pageAs('free-token');
+    assert((await other.goto(`${APP}/admin/seo`)).status() === 404, 'non-admin can see /admin/seo');
+    await other.context().close();
+
+    const html = await (await fetch(`${APP}/split-pdf`)).text();
+    assert(html.includes('<title>Split PDF by Page Range Free - Test Override | PDFAdore</title>'), 'override title not used');
+    assert(html.includes('content="Override description set by the SEO bot in the tests."'), 'override description not used');
+    const merge = await (await fetch(`${APP}/merge-pdf`)).text();
+    assert(merge.includes('<title>Merge PDF Online Free - Combine PDFs | PDFAdore</title>'), 'pages without an override should keep their title');
+    const cron = await fetch(`${APP}/api/cron/seo`);
+    assert(cron.status === 401, `cron without secret returned ${cron.status}`);
+});
+
 await browser.close();
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);
