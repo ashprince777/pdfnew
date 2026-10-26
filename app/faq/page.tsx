@@ -1,11 +1,10 @@
 import React from 'react';
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import FaqSchema from '@/components/FaqSchema';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Accordion from '@/components/Accordion';
-import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = pageMetadata('/faq');
+export const generateMetadata = () => seoMetadata('/faq');
 
 const faqItems = [
     {

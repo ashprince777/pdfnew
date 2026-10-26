@@ -1,11 +1,11 @@
 import Hero from '@/components/Hero';
+import { seoMetadata } from '@/lib/seoOverrides';
 import HomeToolGrid from '@/components/HomeToolGrid';
 import styles from './page.module.css';
-import type { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
-import { organizationSchema, pageMetadata, websiteSchema } from '@/lib/seo';
+import { organizationSchema, websiteSchema } from '@/lib/seo';
 
-export const metadata: Metadata = pageMetadata('/');
+export const generateMetadata = () => seoMetadata('/');
 
 export default function Home() {
   return (

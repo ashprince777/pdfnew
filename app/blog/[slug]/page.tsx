@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
@@ -6,7 +7,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import { ARTICLES, getArticle, type Block } from '@/lib/blog';
 import JsonLd from '@/components/JsonLd';
-import { articleSchema, BLOG_SEO, pageMetadata } from '@/lib/seo';
+import { articleSchema, BLOG_SEO } from '@/lib/seo';
 import styles from '../Blog.module.css';
 
 export const dynamicParams = false;
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const article = getArticle((await params).slug);
     if (!article) return {};
     const seo = BLOG_SEO[article.slug];
-    return pageMetadata(`/blog/${article.slug}`, {
+    return seoMetadata(`/blog/${article.slug}`, {
         title: seo?.title ?? article.title,
         description: seo?.description ?? article.description,
         type: 'article',

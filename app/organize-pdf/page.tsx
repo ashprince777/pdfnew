@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import OrganizePdfClient from './OrganizePdfClient';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/organize-pdf');
+export const generateMetadata = () => seoMetadata('/organize-pdf');
 
 const faqItems = [
     {
@@ -38,12 +38,7 @@ export default function OrganizePdfPage() {
             />
             <FaqSchema items={faqItems} />
 
-            <div className="container py-12 text-center">
-                <h1 className="text-4xl font-bold mb-4">Organize PDF</h1>
-                <p className="text-muted mb-8 text-lg">Sort, reorder, and delete pages from your PDF.</p>
-
-                <OrganizePdfClient />
-            </div>
+            <OrganizePdfClient />
 
             <ToolSeoContent
                 toolName="Organize PDF"

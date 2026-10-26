@@ -1,9 +1,8 @@
 import React from 'react';
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = pageMetadata('/deletion-policy');
+export const generateMetadata = () => seoMetadata('/deletion-policy');
 
 export default function DeletionPolicyPage() {
     return (

@@ -104,11 +104,11 @@ await suite('Tools', 'tests/tools.e2e.mjs', { BASE_URL: 'http://localhost:3210' 
 await suite('Edit PDF', 'tests/editor.e2e.mjs', { BASE_URL: 'http://localhost:3210' });
 stopAll();
 
-// 2. Accounts + billing against a fake Supabase.
+// 2. Accounts + billing against a fake Supabase (running during the build too: pages read SEO overrides then).
 const billingDist = '.next-test-billing';
-if (!skipBuild && (await run(next, ['build'], { ...billingEnv, NEXT_DIST_DIR: billingDist })) !== 0) process.exit(1);
 run('node', ['tests/fake-supabase.mjs'], {}, { background: true });
 await waitForPort(54321);
+if (!skipBuild && (await run(next, ['build'], { ...billingEnv, NEXT_DIST_DIR: billingDist })) !== 0) process.exit(1);
 run(next, ['start', '--port', '3212'], { ...billingEnv, NEXT_DIST_DIR: billingDist }, { background: true });
 await waitForPort(3212);
 await suite('Accounts & billing', 'tests/billing.e2e.mjs', { BASE_URL: 'http://localhost:3212', FAKE_SUPABASE_URL: FAKE_SUPABASE });

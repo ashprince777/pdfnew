@@ -262,7 +262,7 @@ for (const kb of SIZE_PRESETS_KB) {
 
 export const absoluteUrl = (path: string) => (path === '/' ? SITE.url : `${SITE.url}${path}`);
 
-interface MetadataOptions {
+export interface MetadataOptions {
     /** Defaults to the registry entry for `path`. */
     title?: string;
     description?: string;

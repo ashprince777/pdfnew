@@ -1,8 +1,8 @@
-import type { Metadata } from 'next';
-import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import { seoMetadata } from '@/lib/seoOverrides';
+import { breadcrumbSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/about');
+export const generateMetadata = () => seoMetadata('/about');
 
 export default function AboutPage() {
     return (

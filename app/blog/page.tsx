@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import Link from 'next/link';
 import { ARTICLES } from '@/lib/blog';
 import styles from './Blog.module.css';
-import { breadcrumbSchema, blogSchema, pageMetadata } from '@/lib/seo';
+import { breadcrumbSchema, blogSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/blog');
+export const generateMetadata = () => seoMetadata('/blog');
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 

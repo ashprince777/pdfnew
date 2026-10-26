@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import MergeClient from './MergeClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import styles from './page.module.css';
-import { howToSchema, pageMetadata, toolSchema } from '@/lib/seo';
+import { howToSchema, toolSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/merge-pdf');
+export const generateMetadata = () => seoMetadata('/merge-pdf');
 
 /** Same steps as the visible "How to Merge PDFs Step-by-Step" list below. */
 const howToSteps = [

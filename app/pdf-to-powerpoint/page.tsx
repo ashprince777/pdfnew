@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import PdfToPowerpointClient from './PdfToPowerpointClient';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/pdf-to-powerpoint');
+export const generateMetadata = () => seoMetadata('/pdf-to-powerpoint');
 
 const faqItems = [
     { question: 'How does PDF to PowerPoint conversion work?', answer: 'Each page of your PDF is rendered as a high-quality image and placed onto a PowerPoint slide.' },

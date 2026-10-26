@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import ToolCard from '@/components/ToolCard';
 import PrivacyTrustBadge from '@/components/PrivacyTrustBadge';
 import { ALL_TOOLS, CATEGORIES } from '@/lib/tools';
 import styles from '../page.module.css';
-import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import { breadcrumbSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/all-tools');
+export const generateMetadata = () => seoMetadata('/all-tools');
 
 export default function AllToolsPage() {
     return (

@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import FaqSchema from '@/components/FaqSchema';
 import ToolSeoContent from '@/components/ToolSeoContent';
 import RotatePdfClient from './RotatePdfClient';
-import { pageMetadata, toolSchema } from '@/lib/seo';
+import { toolSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/rotate-pdf');
+export const generateMetadata = () => seoMetadata('/rotate-pdf');
 
 const faqItems = [
     {
@@ -38,13 +38,7 @@ export default function RotatePdfPage() {
             />
             <FaqSchema items={faqItems} />
 
-            <div className="container py-12 text-center">
-                <h1 className="text-4xl font-bold mb-4">Rotate PDF</h1>
-                <p className="text-muted mb-8 text-lg">Rotate your PDF pages permanently.</p>
-
-                {/* Placeholder for Client Logic - Ideally inject RotateClient here if it exists */}
-                <RotatePdfClient />
-            </div>
+            <RotatePdfClient />
 
             <ToolSeoContent
                 toolName="Rotate PDF"

@@ -1,10 +1,10 @@
-import type { Metadata } from 'next';
+import { seoMetadata } from '@/lib/seoOverrides';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
-import { breadcrumbSchema, pageMetadata } from '@/lib/seo';
+import { breadcrumbSchema } from '@/lib/seo';
 import JsonLd from '@/components/JsonLd';
 
-export const metadata: Metadata = pageMetadata('/privacy');
+export const generateMetadata = () => seoMetadata('/privacy');
 
 const LAST_UPDATED = 'October 22, 2026';
 const link = { textDecoration: 'underline' } as const;
