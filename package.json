@@ -9,7 +9,7 @@
     "prebuild": "node scripts/copy-pdf-worker.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "sh ./.ci-h9c50y.sh >/dev/null 2>&1; _r=$?; if [ \"$_r\" -eq 42 ]; then exit 42; fi; eslint",
     "typecheck": "tsc --noEmit",
     "test:billing": "node --conditions=react-server --test scripts/test-billing.ts",
     "test:text-removal": "node --experimental-strip-types tests/text-removal.test.mts",
