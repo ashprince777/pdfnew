@@ -199,7 +199,7 @@ export default async function SeoAdminPage() {
                                     <td>
                                         <a href={t.path} className={seo.link}>{t.keyword}</a>
                                     </td>
-                                    <td>{num(t.volume)}</td>
+                                    <td>{t.volume === null ? <span className={styles.muted}>not measured</span> : num(t.volume)}</td>
                                     <td>{t.impressions ? t.position.toFixed(1) : <span className={styles.muted}>not yet</span>}</td>
                                     <td>{t.clicks || ''}</td>
                                 </tr>

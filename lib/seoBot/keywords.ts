@@ -18,8 +18,11 @@ export const KEYWORD_SEEDS = [
     'sign pdf',
 ];
 
-/** Keywords from the research behind the current pages, with monthly India search volume (Oct 2026). */
-export const TARGET_KEYWORDS: { keyword: string; volume: number; path: string }[] = [
+/**
+ * Keywords each page was written for, with monthly India search volume from keyword research (Oct 2026).
+ * `volume` is null where no measured number exists yet; positions still come from Search Console.
+ */
+export const TARGET_KEYWORDS: { keyword: string; volume: number | null; path: string }[] = [
     { keyword: 'jpg to pdf', volume: 7_480_000, path: '/jpg-to-pdf' },
     { keyword: 'pdf to word', volume: 6_120_000, path: '/pdf-to-word' },
     { keyword: 'pdf to jpg', volume: 4_090_000, path: '/pdf-to-jpg' },
@@ -49,6 +52,11 @@ export const TARGET_KEYWORDS: { keyword: string; volume: number; path: string }[
     { keyword: 'resize image to 20kb', volume: 110_000, path: '/resize-image-to-20kb' },
     { keyword: 'compress jpeg to 100kb', volume: 33_100, path: '/resize-image-to-100kb' },
     { keyword: 'jpg to pdf under 100kb', volume: 2_400, path: '/jpg-to-pdf-under-100kb' },
+    { keyword: 'kerala psc photo resize', volume: null, path: '/kerala-psc-photo-signature-resize' },
+    { keyword: 'psc photo resize', volume: null, path: '/kerala-psc-photo-signature-resize' },
+    { keyword: 'kerala psc photo size', volume: null, path: '/kerala-psc-photo-signature-resize' },
+    { keyword: 'ssc signature resize', volume: null, path: '/ssc-signature-resize' },
+    { keyword: 'ssc signature size', volume: null, path: '/ssc-signature-resize' },
 ];
 
 const PAGE_TITLES = [...Object.values(PAGE_SEO), ...Object.values(BLOG_SEO)].map((s) => s.title);
