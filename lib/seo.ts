@@ -45,6 +45,14 @@ export const PAGE_SEO: Record<string, PageSeo> = {
         title: 'Compress Image to 20KB, 50KB, 100KB Online Free | PDFAdore',
         description: 'Reduce a photo, signature or scan to an exact size in KB for exam and government forms. Set width and height in pixels too. Free, and nothing is uploaded.',
     },
+    '/kerala-psc-photo-signature-resize': {
+        title: 'Kerala PSC Photo & Signature Resize - 150x200, 30 KB | PDFAdore',
+        description: 'Resize your photo to 150 x 200 pixels under 30 KB with name and date, and your signature to 150 x 100, for Kerala PSC One Time Registration. Free, no upload.',
+    },
+    '/ssc-signature-resize': {
+        title: 'SSC Signature Resize - 10 to 20 KB JPG Online Free | PDFAdore',
+        description: 'Make your scanned signature a 10 to 20 KB JPG in the 6 cm x 2 cm shape that SSC application forms ask for, as in the CGL 2026 notice. Free, nothing uploaded.',
+    },
     '/repair-pdf': {
         title: 'Repair PDF Online Free - Fix Corrupted PDF | PDFAdore',
         description: 'Fix a damaged or corrupted PDF that will not open. PDFAdore rebuilds the file structure and keeps text and links. Free, private and works in your browser.',

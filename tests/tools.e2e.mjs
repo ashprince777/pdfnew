@@ -428,6 +428,77 @@ await test('compress image to a size in KB and to exact pixels', async (page) =>
     return `${Math.round(small.bytes.length / 1024)} KB under 20 KB; exact 200x230 at ${Math.round(exact.bytes.length / 1024)} KB`;
 });
 
+await test('exam pages: Kerala PSC photo with name and date, SSC signature 10 to 20 KB', async (page) => {
+    await open(page, '/kerala-psc-photo-signature-resize');
+    await page.getByRole('heading', { level: 1, name: /Kerala PSC Photo & Signature Resize/ }).waitFor();
+    const big = await makeBigPhoto(page);
+    await upload(page, big);
+    const resize = page.getByRole('button', { name: /Resize photo/ });
+    assert(await resize.isDisabled(), 'photo should need a name first');
+    await page.getByLabel(/Your name/).fill('ANJALI K');
+    await page.getByLabel(/Date the photo was taken/).fill('01-11-2026');
+    await resize.click();
+    const photo = await result(page);
+    const photoSize = jpegSize(photo.bytes);
+    assert(photoSize?.width === 150 && photoSize?.height === 200, `photo ${JSON.stringify(photoSize)}`);
+    assert(photo.bytes.length <= 30 * 1024, `photo ${photo.bytes.length} bytes is over 30 KB`);
+    // The caption strip at the bottom is white with dark text; the test photo itself has no white.
+    const strip = await page.evaluate(async (url) => {
+        const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        const px = ctx.getImageData(0, 165, 150, 35).data;
+        let white = 0;
+        let dark = 0;
+        for (let i = 0; i < px.length; i += 4) {
+            const v = (px[i] + px[i + 1] + px[i + 2]) / 3;
+            if (v > 225) white++;
+            else if (v < 90) dark++;
+        }
+        return { white: white / (px.length / 4), dark: dark / (px.length / 4) };
+    }, await page.locator('a[download]').first().getAttribute('href'));
+    assert(strip.white > 0.5 && strip.dark > 0.03, `no name/date strip: ${JSON.stringify(strip)}`);
+
+    await open(page, '/kerala-psc-photo-signature-resize');
+    await upload(page, fx('signature-photo.jpg'));
+    await page.getByRole('radio', { name: /Signature/ }).click();
+    await click(page, /Resize signature/);
+    const sign = await result(page);
+    const signSize = jpegSize(sign.bytes);
+    assert(signSize?.width === 150 && signSize?.height === 100 && sign.bytes.length <= 30 * 1024, `signature ${JSON.stringify(signSize)} ${sign.bytes.length}`);
+
+    await open(page, '/ssc-signature-resize');
+    await upload(page, big);
+    await click(page, /Resize signature/);
+    const ssc = await result(page);
+    const sscSize = jpegSize(ssc.bytes);
+    assert(sscSize?.width === 600 && sscSize?.height === 200, `ssc ${JSON.stringify(sscSize)}`);
+    assert(ssc.bytes.length >= 10 * 1024 && ssc.bytes.length <= 20 * 1024, `ssc signature is ${ssc.bytes.length} bytes, outside 10 to 20 KB`);
+    return `PSC photo ${Math.round(photo.bytes.length / 1024)} KB with caption; PSC signature ${Math.round(sign.bytes.length / 1024)} KB; SSC signature ${Math.round(ssc.bytes.length / 1024)} KB`;
+});
+
+await test('tools dropdown in the top bar', async (page) => {
+    await open(page, '/');
+    const button = page.getByRole('button', { name: /All \d+ Tools/ });
+    await button.click();
+    const panel = page.locator('#tools-menu-panel');
+    await panel.waitFor();
+    for (const name of ['Merge PDF', 'Compress Image', 'PDF to Text', 'Resize image to 20 KB', 'Kerala PSC photo & signature']) {
+        assert(await panel.getByRole('link', { name, exact: true }).isVisible(), `menu is missing ${name}`);
+    }
+    await page.screenshot({ path: path.join(OUT, 'tools-menu.png') });
+    await page.keyboard.press('Escape');
+    assert((await panel.count()) === 0, 'Escape should close the menu');
+    await button.click();
+    await panel.getByRole('link', { name: 'Compress Image', exact: true }).click();
+    await page.waitForURL('**/compress-image');
+    assert((await panel.count()) === 0, 'menu should close after navigating');
+    return 'opens, lists tools, closes on Escape and after navigating';
+});
+
 await test('jpg to pdf under a size limit', async (page) => {
     await open(page, '/jpg-to-pdf-under-100kb');
     await page.getByRole('heading', { level: 1, name: 'JPG to PDF under 100 KB' }).waitFor();
@@ -441,7 +512,7 @@ await test('jpg to pdf under a size limit', async (page) => {
     assert(bytes.length > 50 * 1024, `PDF is only ${bytes.length} bytes: compressed far more than needed`);
     assert(/under your 100 KB limit/.test(heading), `message: ${heading}`);
     const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
-    for (const route of ['/compress-image', '/resize-image-to-20kb', '/resize-image-to-500kb', '/jpg-to-pdf-under-100kb', '/jpg-to-pdf-under-500kb']) {
+    for (const route of ['/compress-image', '/resize-image-to-20kb', '/resize-image-to-500kb', '/jpg-to-pdf-under-100kb', '/jpg-to-pdf-under-500kb', '/kerala-psc-photo-signature-resize', '/ssc-signature-resize']) {
         assert(sitemap.includes(route), `${route} missing from sitemap`);
     }
     return `2 photos (${Math.round((2 * fs.statSync(big).size) / 1024)} KB) → ${Math.round(bytes.length / 1024)} KB PDF`;

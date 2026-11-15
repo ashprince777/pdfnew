@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, Search, FileStack, Scissors, Minimize2 } from 'lucide-react';
-import { ALL_TOOLS } from '@/lib/tools';
 import ThemeToggle from './ThemeToggle';
 import CommandPalette from './CommandPalette';
 import MobileDrawer from './MobileDrawer';
+import ToolsMenu from './ToolsMenu';
 import AccountButton from './AccountButton';
 import { usePlan } from './PlanProvider';
 import BrandLogo from './BrandLogo';
@@ -78,9 +78,7 @@ export default function Navbar() {
                             </Link>
                         )}
 
-                        <Link href="/all-tools" className={styles.btnAll}>
-                            All {ALL_TOOLS.length} Tools
-                        </Link>
+                        <ToolsMenu />
 
                         <ThemeToggle />
                         <AccountButton />
