@@ -178,7 +178,8 @@ export default function EditPdfClient() {
     const imageInputRef = useRef<HTMLInputElement | null>(null);
     const imageTarget = useRef<ImageBox | null>(null);
     const pdfjsDocRef = useRef<PDFDocumentProxy | null>(null);
-    const libDocRef = useRef<PDFDocument | null>(null);
+    /** The open PDF parsed by pdf-lib, used to find images on a page. */
+    const [libDoc, setLibDoc] = useState<PDFDocument | null>(null);
     const analyses = useRef(new Map<number, PageAnalysis>());
     /** Input type of the latest press on the page: touch presses act on tap, so scrolling and pinching never open an editor. */
     const pointerType = useRef('mouse');
@@ -202,7 +203,7 @@ export default function EditPdfClient() {
     const releaseFile = useCallback(() => {
         pdfjsDocRef.current?.destroy();
         pdfjsDocRef.current = null;
-        libDocRef.current = null;
+        setLibDoc(null);
         analyses.current.forEach((a) => (a.canvas.width = a.canvas.height = 0));
         analyses.current.clear();
     }, []);
@@ -242,8 +243,8 @@ export default function EditPdfClient() {
         let cancelled = false;
         (async () => {
             try {
-                if (currentTool === 'image' && !(currentPage in imagesByPage) && libDocRef.current) {
-                    const boxes = findImageBoxes(libDocRef.current, currentPage - 1);
+                if (currentTool === 'image' && !(currentPage in imagesByPage) && libDoc) {
+                    const boxes = findImageBoxes(libDoc, currentPage - 1);
                     if (!cancelled) setImagesByPage((prev) => ({ ...prev, [currentPage]: boxes }));
                 }
                 if (currentTool === 'text' && !(currentPage in segmentsByPage)) {
@@ -261,7 +262,7 @@ export default function EditPdfClient() {
         return () => {
             cancelled = true;
         };
-    }, [file, currentTool, currentPage, segmentsByPage, imagesByPage, getAnalysis, notify]);
+    }, [file, currentTool, currentPage, segmentsByPage, imagesByPage, libDoc, getAnalysis, notify]);
 
     const pxPerPt = displayWidth > 0 ? displayWidth / pageSize.width : 1;
     const displayHeight = displayWidth * (pageSize.height / pageSize.width);
@@ -271,13 +272,13 @@ export default function EditPdfClient() {
         const selectedFile = files[0];
         if (!selectedFile) return;
         (async () => {
-            const libDoc = await loadPdf(selectedFile);
+            const loaded = await loadPdf(selectedFile);
             const pdfjsDoc = await openPdfjsDocument(await selectedFile.arrayBuffer());
             releaseFile();
-            libDocRef.current = libDoc;
+            setLibDoc(loaded);
             pdfjsDocRef.current = pdfjsDoc;
             setFile(selectedFile);
-            setTotalPages(libDoc.getPageCount());
+            setTotalPages(loaded.getPageCount());
             setCurrentPage(1);
             setAnnotations([]);
             setSegmentsByPage({});
@@ -304,23 +305,23 @@ export default function EditPdfClient() {
 
     const focusInline = () => setTimeout(() => inlineInputRef.current?.focus(), 0);
 
+    /** While an edit is open, the first press anywhere only closes it; otherwise the press runs `action`. */
+    const runTap = (e: React.SyntheticEvent, action: (e: React.SyntheticEvent) => void) => (selectedId !== null ? deselect() : action(e));
     /**
-     * Mouse and pen act on press; touch acts on tap (click), which the browser only fires when the finger
-     * did not scroll or pinch. Spread onto anything that selects or opens an editor.
+     * Mouse and pen act on press (onTapDown); touch acts on tap (onTapClick), which the browser only fires
+     * when the finger did not scroll or pinch. Use both on anything that selects or opens an editor.
      */
-    const tapProps = (action: (e: React.SyntheticEvent) => void) => {
-        // While an edit is open, the first click anywhere only closes it; the next click opens the new one.
-        const run = (e: React.SyntheticEvent) => (selectedId !== null ? deselect() : action(e));
-        return {
-            onPointerDown: (e: React.PointerEvent) => {
-                e.stopPropagation();
-                if (e.pointerType !== 'touch') run(e);
-            },
-            onClick: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                if (pointerType.current === 'touch') run(e);
-            },
-        };
+    const onTapDown = (e: React.PointerEvent, action: (e: React.SyntheticEvent) => void) => {
+        e.stopPropagation();
+        if (e.pointerType !== 'touch') runTap(e, action);
+    };
+    const onTapClick = (e: React.MouseEvent, action: (e: React.SyntheticEvent) => void) => {
+        e.stopPropagation();
+        if (pointerType.current === 'touch') runTap(e, action);
+    };
+    const selectText = (id: number) => {
+        setSelectedId(id);
+        focusInline();
     };
 
     const onOverlayPointerDownCapture = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -616,7 +617,7 @@ export default function EditPdfClient() {
 
     const pageAnnotations = annotations.filter((a) => a.page === currentPage);
     const pageSegments = segmentsByPage[currentPage];
-    const pageImages = imagesByPage[currentPage] ?? (libDocRef.current && pageAnnotations.some((a) => a.kind === 'image') ? findImageBoxes(libDocRef.current, currentPage - 1) : []);
+    const pageImages = imagesByPage[currentPage] ?? (libDoc && pageAnnotations.some((a) => a.kind === 'image') ? findImageBoxes(libDoc, currentPage - 1) : []);
     const changeCount = annotations.filter(isMeaningful).length;
     const isReplaced = (segment: TextSegment) =>
         pageAnnotations.some((a) => a.kind === 'replace' && Math.abs(a.x - segment.x / pageSize.width) < 1e-6 && Math.abs(a.y - segment.top / pageSize.height) < 1e-6);
@@ -778,7 +779,8 @@ export default function EditPdfClient() {
                                         key={`seg-${i}`}
                                         role="button"
                                         aria-label={`Edit text: ${segment.text}`}
-                                        {...tapProps((e) => editSegment(e, segment))}
+                                        onPointerDown={(e) => onTapDown(e, (ev) => editSegment(ev, segment))}
+                                        onClick={(e) => onTapClick(e, (ev) => editSegment(ev, segment))}
                                         className={styles.segment}
                                         style={{
                                             left: `${(segment.x / pageSize.width) * 100}%`,
@@ -796,7 +798,8 @@ export default function EditPdfClient() {
                                         key={`img-${i}`}
                                         role="button"
                                         aria-label="Replace this image"
-                                        {...tapProps((e) => chooseImage(e, box))}
+                                        onPointerDown={(e) => onTapDown(e, (ev) => chooseImage(ev, box))}
+                                        onClick={(e) => onTapClick(e, (ev) => chooseImage(ev, box))}
                                         className={styles.imageTarget}
                                         style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
                                     >
@@ -814,7 +817,8 @@ export default function EditPdfClient() {
                                         .map((box, i) => (
                                             <div
                                                 key={`${ann.id}-${i}`}
-                                                {...tapProps((e) => currentTool === 'image' && chooseImage(e, box))}
+                                                onPointerDown={(e) => onTapDown(e, (ev) => currentTool === 'image' && chooseImage(ev, box))}
+                                                onClick={(e) => onTapClick(e, (ev) => currentTool === 'image' && chooseImage(ev, box))}
                                                 className={styles.replacedImage}
                                                 style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
                                             >
@@ -848,10 +852,8 @@ export default function EditPdfClient() {
                                                 <div
                                                     className={styles.cover}
                                                     style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, width: `${ann.w * 100}%`, height: `${ann.h * 100}%`, background: ann.background }}
-                                                    {...tapProps(() => {
-                                                        setSelectedId(ann.id);
-                                                        focusInline();
-                                                    })}
+                                                    onPointerDown={(e) => onTapDown(e, () => selectText(ann.id))}
+                                                    onClick={(e) => onTapClick(e, () => selectText(ann.id))}
                                                 />
                                             )}
                                             {isSelected ? (
@@ -879,10 +881,8 @@ export default function EditPdfClient() {
                                                 changed && (
                                                     <span
                                                         className={styles.placedText}
-                                                        {...tapProps(() => {
-                                                            setSelectedId(ann.id);
-                                                            focusInline();
-                                                        })}
+                                                        onPointerDown={(e) => onTapDown(e, () => selectText(ann.id))}
+                                                        onClick={(e) => onTapClick(e, () => selectText(ann.id))}
                                                         style={{ left: `${ann.x * 100}%`, top: textTopPx, fontSize: fontPx, fontWeight: ann.bold ? 700 : 400, color: ann.color, ...fontStyle }}
                                                     >
                                                         {ann.text}
@@ -913,10 +913,8 @@ export default function EditPdfClient() {
                                         <span
                                             key={ann.id}
                                             className={styles.placedText}
-                                            {...tapProps(() => {
-                                                setSelectedId(ann.id);
-                                                focusInline();
-                                            })}
+                                            onPointerDown={(e) => onTapDown(e, () => selectText(ann.id))}
+                                            onClick={(e) => onTapClick(e, () => selectText(ann.id))}
                                             style={{ left: `${ann.x * 100}%`, top: topPx, fontSize: fontPx, fontWeight: ann.bold ? 700 : 400, color: ann.color }}
                                         >
                                             {ann.text}

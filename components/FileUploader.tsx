@@ -66,22 +66,6 @@ export default function FileUploader({
         addRecentToolHref(window.location.pathname);
     }, []);
 
-    // "Continue with another tool": pick up the previous tool's result, if it was handed over.
-    const handleFilesRef = useRef<(files: File[]) => void>(() => {});
-    useEffect(() => {
-        handleFilesRef.current = (files) => handleFiles(files);
-    });
-    useEffect(() => {
-        if (variant === 'compact') return;
-        // Claimed inside the timer so React's development double-mount can't lose the file.
-        const timer = setTimeout(() => {
-            const handoff = takeHandoff(accept);
-            if (handoff) handleFilesRef.current([handoff.file]);
-        }, 0);
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
-    }, []);
-
     const allowedExtensions = accept
         .split(',')
         .map((ext) => ext.trim().toLowerCase().replace(/^\./, ''))
@@ -120,6 +104,22 @@ export default function FileUploader({
         setUpgradeHint(Boolean(error) && canUpgrade && /Free plan/.test(error ?? ''));
         if (!error) onFilesSelected(selected);
     };
+
+    // "Continue with another tool": pick up the previous tool's result, if it was handed over.
+    const handleFilesRef = useRef<(files: File[]) => void>(() => {});
+    useEffect(() => {
+        handleFilesRef.current = (files) => handleFiles(files);
+    });
+    useEffect(() => {
+        if (variant === 'compact') return;
+        // Claimed inside the timer so React's development double-mount can't lose the file.
+        const timer = setTimeout(() => {
+            const handoff = takeHandoff(accept);
+            if (handoff) handleFilesRef.current([handoff.file]);
+        }, 0);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
+    }, []);
 
     const triggerFilePicker = () => {
         setErrorMessage(null);

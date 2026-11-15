@@ -1,6 +1,6 @@
 "use client";
 import { trackEvent } from '@/lib/analytics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowRight, Bot, Copy, Crown, Download, FileText, Send, ShieldCheck, Sparkles } from 'lucide-react';
@@ -41,6 +41,12 @@ function readConsent(): boolean {
     } catch {
         return false;
     }
+}
+
+/** Re-reads the saved consent when another tab changes it. */
+function subscribeConsent(onChange: () => void) {
+    window.addEventListener('storage', onChange);
+    return () => window.removeEventListener('storage', onChange);
 }
 
 /** Streams POST /api/ai, calling onText with the full answer so far. */
@@ -106,7 +112,10 @@ export default function AiPdfTool({ task }: { task: AiTask }) {
     const pathname = usePathname();
     const { showToast } = useToast();
     const [credits, setCredits] = useState<Credits | null>(null);
-    const [consented, setConsented] = useState(false);
+    // Saved consent from an earlier visit (false while rendering on the server), or accepted just now.
+    const savedConsent = useSyncExternalStore(subscribeConsent, readConsent, () => false);
+    const [acceptedNow, setAcceptedNow] = useState(false);
+    const consented = savedConsent || acceptedNow;
     const [consentChecked, setConsentChecked] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [extracted, setExtracted] = useState<ExtractedPdf | null>(null);
@@ -122,7 +131,6 @@ export default function AiPdfTool({ task }: { task: AiTask }) {
     const chatEnd = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setConsented(readConsent());
         fetch(`/api/ai/credits?task=${task}`, { cache: 'no-store' })
             .then((res) => res.json())
             .then((data: Credits) => setCredits(data))
@@ -216,7 +224,7 @@ export default function AiPdfTool({ task }: { task: AiTask }) {
         } catch {
             // Private mode: ask again next visit.
         }
-        setConsented(true);
+        setAcceptedNow(true);
     };
 
     const copy = COPY[task];

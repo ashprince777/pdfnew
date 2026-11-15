@@ -31,13 +31,13 @@
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.561.0",
-    "next": "16.0.10",
+    "next": "16.4.6",
     "pdfjs-dist": "^5.4.449",
     "postcss": "^8.5.28",
     "pptxgenjs": "^4.0.1",
     "razorpay": "^2.9.8",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
     "server-only": "^0.0.1",
     "tailwindcss": "^4.3.3",
     "tesseract.js": "^7.0.0",
@@ -48,8 +48,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.10",
+    "eslint-config-next": "16.4.6",
     "playwright-core": "^1.48.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "image-size": "^2.1.0",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    }
   }
 }
