@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { ALL_TOOLS, TOOL_VARIANTS } from '@/lib/tools';
 import { ARTICLES } from '@/lib/blog';
-import { KERALA_PSC, SSC } from '@/lib/examPhotos';
+import { KERALA_PSC, KERALA_PSC_ML, SSC } from '@/lib/examPhotos';
 import { IMAGE_SIZE_PRESETS_KB, JPG_PDF_SIZE_PRESETS_KB, SIZE_PRESETS_KB, sizeSlug } from '@/lib/compressSizes';
 
 const BASE_URL = 'https://www.pdfadore.com';
@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'monthly' as const,
             priority: 0.7,
         })),
-        ...[...IMAGE_SIZE_PRESETS_KB.map((kb) => `/resize-image-to-${sizeSlug(kb)}`), ...JPG_PDF_SIZE_PRESETS_KB.map((kb) => `/jpg-to-pdf-under-${sizeSlug(kb)}`), KERALA_PSC.path, SSC.path].map((path) => ({
+        ...[...IMAGE_SIZE_PRESETS_KB.map((kb) => `/resize-image-to-${sizeSlug(kb)}`), ...JPG_PDF_SIZE_PRESETS_KB.map((kb) => `/jpg-to-pdf-under-${sizeSlug(kb)}`), KERALA_PSC.path, KERALA_PSC_ML.path, SSC.path].map((path) => ({
             url: `${BASE_URL}${path}`,
             lastModified: LAST_UPDATED,
             changeFrequency: 'monthly' as const,

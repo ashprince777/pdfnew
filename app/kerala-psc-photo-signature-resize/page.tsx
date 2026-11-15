@@ -1,8 +1,8 @@
 import ExamPhotoLanding from '@/components/ExamPhotoLanding';
-import { KERALA_PSC } from '@/lib/examPhotos';
-import { seoMetadata } from '@/lib/seoOverrides';
+import { KERALA_PSC, KERALA_PSC_ML } from '@/lib/examPhotos';
+import { examLanguageMetadata } from '@/lib/seoOverrides';
 
-export const generateMetadata = () => seoMetadata(KERALA_PSC.path);
+export const generateMetadata = () => examLanguageMetadata(KERALA_PSC.path, { en: KERALA_PSC.path, ml: KERALA_PSC_ML.path });
 
 const rules: [string, string][] = [
     ['Photo size', '150 pixels wide and 200 pixels high, JPG format, file size not more than 30 KB.'],

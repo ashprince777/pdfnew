@@ -480,6 +480,25 @@ await test('exam pages: Kerala PSC photo with name and date, SSC signature 10 to
     return `PSC photo ${Math.round(photo.bytes.length / 1024)} KB with caption; PSC signature ${Math.round(sign.bytes.length / 1024)} KB; SSC signature ${Math.round(ssc.bytes.length / 1024)} KB`;
 });
 
+await test('Kerala PSC page in Malayalam', async (page) => {
+    await open(page, '/kerala-psc-photo-resize-malayalam');
+    await page.getByRole('heading', { level: 1, name: 'കേരള PSC ഫോട്ടോയും ഒപ്പും റീസൈസ് ചെയ്യാം' }).waitFor();
+    const html = await (await fetch(`${BASE}/kerala-psc-photo-resize-malayalam`)).text();
+    assert(/hrefLang="en-IN" href="https:\/\/www\.pdfadore\.com\/kerala-psc-photo-signature-resize"/i.test(html), 'missing hreflang to the English page');
+    assert(/hrefLang="ml-IN" href="https:\/\/www\.pdfadore\.com\/kerala-psc-photo-resize-malayalam"/i.test(html), 'missing hreflang to itself');
+    assert(html.includes('lang="ml"'), 'content not marked as Malayalam');
+    await upload(page, await makeBigPhoto(page));
+    await page.getByLabel('നിങ്ങളുടെ പേര് (ഫോട്ടോയിൽ പ്രിന്റ് ചെയ്യും)').fill('അഞ്ജലി കെ');
+    await page.getByRole('button', { name: 'ഫോട്ടോ റീസൈസ് ചെയ്യുക' }).click();
+    const photo = await result(page);
+    const size = jpegSize(photo.bytes);
+    assert(size?.width === 150 && size?.height === 200 && photo.bytes.length <= 30 * 1024, `photo ${JSON.stringify(size)} ${photo.bytes.length}`);
+    assert(/തയ്യാർ!/.test(photo.heading), `message: ${photo.heading}`);
+    const english = await (await fetch(`${BASE}/kerala-psc-photo-signature-resize`)).text();
+    assert(english.includes('href="/kerala-psc-photo-resize-malayalam"') && /hrefLang="ml-IN"/i.test(english), 'English page does not link to the Malayalam one');
+    return `Malayalam labels, ${Math.round(photo.bytes.length / 1024)} KB photo with Malayalam name, hreflang both ways`;
+});
+
 await test('tools dropdown in the top bar', async (page) => {
     await open(page, '/');
     const button = page.getByRole('button', { name: /All \d+ Tools/ });

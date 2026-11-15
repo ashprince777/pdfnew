@@ -1,7 +1,7 @@
 import 'server-only';
 import type { Metadata } from 'next';
 import { isAuthEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase/config';
-import { pageMetadata, type MetadataOptions } from './seo';
+import { absoluteUrl, pageMetadata, type MetadataOptions } from './seo';
 
 /** Cache tag for the live titles; the SEO bot revalidates it after changing one. */
 export const SEO_OVERRIDES_TAG = 'seo-overrides';
@@ -39,3 +39,16 @@ export async function seoMetadata(path: string, options: MetadataOptions = {}): 
     const override = (await getSeoOverrides())[path];
     return pageMetadata(path, override ? { ...options, title: override.title, description: override.description } : options);
 }
+
+/** Metadata for a page that exists in English and Malayalam: adds hreflang links between the two. */
+export async function examLanguageMetadata(path: string, versions: { en: string; ml: string }): Promise<Metadata> {
+    const metadata = await seoMetadata(path);
+    return {
+        ...metadata,
+        alternates: {
+            ...metadata.alternates,
+            languages: { 'en-IN': absoluteUrl(versions.en), 'ml-IN': absoluteUrl(versions.ml), 'x-default': absoluteUrl(versions.en) },
+        },
+    };
+}
+

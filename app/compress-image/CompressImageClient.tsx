@@ -9,7 +9,7 @@ import { ToolHeader, ToolWorkspace, SelectedFile, OptionsCard, ChoiceGroup, Prim
 import { baseName, formatBytes } from '@/lib/pdf';
 import { fitImageToSize } from '@/lib/imageFit';
 import { IMAGE_SIZE_PRESETS_KB, sizeLabel, sizeSlug } from '@/lib/compressSizes';
-import type { ExamSpec } from '@/lib/examPhotos';
+import { EXAM_TEXT, type ExamSpec } from '@/lib/examPhotos';
 import { useToolRunner } from '@/lib/useToolRunner';
 
 const ACCEPT = '.jpg,.jpeg,.png,.webp';
@@ -42,6 +42,7 @@ export default function CompressImageClient({ defaultTargetKb, exam }: { default
     const [name, setName] = useState('');
     const [photoDate, setPhotoDate] = useState(todayText);
     const preset = exam?.presets.find((p) => p.id === presetId);
+    const text = EXAM_TEXT[exam?.lang ?? 'en'];
     const tool = useToolRunner();
 
     // Release the preview when it is replaced or the page is left.
@@ -69,11 +70,13 @@ export default function CompressImageClient({ defaultTargetKb, exam }: { default
             const tooSmall = preset?.minKb && result.blob.size < preset.minKb * 1024;
             setMessage(
                 !result.reached
-                    ? `This picture could not go under ${limit} at ${size}. The smallest version is ${formatBytes(result.blob.size)}. Try a larger limit or smaller pixel size.`
+                    ? preset
+                        ? text.tooLarge(limit, formatBytes(result.blob.size), size)
+                        : `This picture could not go under ${limit} at ${size}. The smallest version is ${formatBytes(result.blob.size)}. Try a larger limit or smaller pixel size.`
                     : tooSmall
-                      ? `Your file is ${formatBytes(result.blob.size)}, below the ${preset.minKb} KB minimum. Scan or photograph the signature larger and sharper, then try again.`
+                      ? text.tooSmall(formatBytes(result.blob.size), preset.minKb!)
                       : preset
-                        ? `Done! ${formatBytes(result.blob.size)}, ${size}: ready for the ${exam!.name} form.`
+                        ? text.done(formatBytes(result.blob.size), size)
                         : `Done! ${formatBytes(file.size)} → ${formatBytes(result.blob.size)}, under your ${limit} limit (${size}).`
             );
             const suffix = preset ? `${exam!.name.toLowerCase().replace(/\s+/g, '-')}-${preset.id}` : sizeSlug(targetKb);
@@ -108,19 +111,19 @@ export default function CompressImageClient({ defaultTargetKb, exam }: { default
                     )}
 
                     {exam && preset ? (
-                        <OptionsCard title={`${exam.name} requirements`}>
+                        <OptionsCard title={`${exam.name} ${text.requirements}`}>
                             <div style={{ display: 'grid', gap: 12 }}>
                                 {exam.presets.length > 1 && (
-                                    <ChoiceGroup label="What are you uploading?" value={presetId} onChange={setPresetId} options={exam.presets.map((p) => ({ value: p.id, title: p.label }))} />
+                                    <ChoiceGroup label={text.whatUploading} value={presetId} onChange={setPresetId} options={exam.presets.map((p) => ({ value: p.id, title: p.label }))} />
                                 )}
                                 <p style={{ fontSize: 'var(--text-sm)' }}>
-                                    <strong>You will get:</strong> {preset.summary}
+                                    <strong>{text.youWillGet}</strong> {preset.summary}
                                 </p>
                                 {preset.caption && (
                                     <>
-                                        <label className={toolStyles.label} htmlFor="caption-name">Your name (printed on the photo)</label>
-                                        <input id="caption-name" type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} className={toolStyles.input} placeholder="Name as in your application" />
-                                        <label className={toolStyles.label} htmlFor="caption-date">Date the photo was taken</label>
+                                        <label className={toolStyles.label} htmlFor="caption-name">{text.nameLabel}</label>
+                                        <input id="caption-name" type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} className={toolStyles.input} placeholder={text.namePlaceholder} />
+                                        <label className={toolStyles.label} htmlFor="caption-date">{text.dateLabel}</label>
                                         <input id="caption-date" type="text" maxLength={12} value={photoDate} onChange={(e) => setPhotoDate(e.target.value)} className={toolStyles.input} style={{ maxWidth: 200 }} placeholder="DD-MM-YYYY" />
                                     </>
                                 )}
@@ -168,7 +171,7 @@ export default function CompressImageClient({ defaultTargetKb, exam }: { default
                     )}
 
                     <PrimaryAction onClick={compress} disabled={preset ? Boolean(preset.caption) && (!name.trim() || !photoDate.trim()) : targetKb < 5}>
-                        {preset ? `Resize ${preset.label.toLowerCase()}` : 'Compress image'} <Minimize2 size={20} />
+                        {preset ? text.resize(preset.label) : 'Compress image'} <Minimize2 size={20} />
                     </PrimaryAction>
                 </ToolWorkspace>
             )}

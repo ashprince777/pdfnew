@@ -373,5 +373,6 @@ export const FORM_LINKS = [
     { title: 'Resize image to 50 KB', href: '/resize-image-to-50kb' },
     { title: 'JPG to PDF under 100 KB', href: '/jpg-to-pdf-under-100kb' },
     { title: 'Kerala PSC photo & signature', href: '/kerala-psc-photo-signature-resize' },
+    { title: 'കേരള PSC ഫോട്ടോ (മലയാളം)', href: '/kerala-psc-photo-resize-malayalam' },
     { title: 'SSC signature', href: '/ssc-signature-resize' },
 ];

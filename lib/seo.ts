@@ -49,6 +49,10 @@ export const PAGE_SEO: Record<string, PageSeo> = {
         title: 'Kerala PSC Photo & Signature Resize - 150x200, 30 KB | PDFAdore',
         description: 'Resize your photo to 150 x 200 pixels under 30 KB with name and date, and your signature to 150 x 100, for Kerala PSC One Time Registration. Free, no upload.',
     },
+    '/kerala-psc-photo-resize-malayalam': {
+        title: 'കേരള PSC ഫോട്ടോ, ഒപ്പ് റീസൈസ് - 150x200, 30 KB | PDFAdore',
+        description: 'കേരള PSC വൺ ടൈം രജിസ്ട്രേഷനു വേണ്ട 150 x 200 പിക്സൽ, 30 KB ഫോട്ടോ പേരും തീയതിയും സഹിതം, 150 x 100 ഒപ്പും സൗജന്യമായി. ഫയൽ അപ്‌ലോഡ് ചെയ്യുന്നില്ല.',
+    },
     '/ssc-signature-resize': {
         title: 'SSC Signature Resize - 10 to 20 KB JPG Online Free | PDFAdore',
         description: 'Make your scanned signature a 10 to 20 KB JPG in the 6 cm x 2 cm shape that SSC application forms ask for, as in the CGL 2026 notice. Free, nothing uploaded.',
