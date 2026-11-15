@@ -59,6 +59,21 @@ const store = {
     ],
     seo_updates: [{ id: 'status:x', source: 'status', title: 'October 2026 core update', url: 'https://status.search.google.com/', published_at: new Date().toISOString(), ended_at: null, note: 'A broad core update.' }],
     seo_keywords: [{ keyword: 'compress pdf below 100kb', seed: 'compress pdf', covered: false, first_seen: new Date().toISOString().slice(0, 10) }],
+    seo_forum_threads: [
+        {
+            id: 'reddit:t3_test',
+            source: 'reddit',
+            url: 'https://www.reddit.com/r/Kerala/comments/test',
+            title: 'PSC photo upload says invalid size, help',
+            body: 'Thulasi keeps rejecting my photo.',
+            community: 'r/Kerala',
+            posted_at: new Date().toISOString(),
+            found_at: new Date().toISOString(),
+            query: 'kerala psc photo',
+            draft: 'Kerala PSC wants 150 x 200 pixels under 30 KB. I built a free tool: https://www.pdfadore.com/kerala-psc-photo-signature-resize',
+            status: 'new',
+        },
+    ],
 };
 /** Bodies of the requests the app sent to the Groq API, newest last. */
 const aiRequests = [];
@@ -121,6 +136,11 @@ http.createServer(async (req, res) => {
         const system = request.messages.find((m) => m.role === 'system')?.content || '';
         if (system.includes('FAIL_UPSTREAM')) return send(res, 400, { error: { message: 'fake failure', type: 'invalid_request_error' } });
         const turns = request.messages.filter((m) => m.role !== 'system');
+        if (!request.stream) {
+            // Non-streaming calls (SEO bot drafts) get a plain chat completion.
+            const content = `FAKE DRAFT for: ${String(turns[turns.length - 1].content).split('Question title: ')[1]?.split('\n')[0] ?? ''}`;
+            return send(res, 200, { id: 'chatcmpl-fake', object: 'chat.completion', created: 0, model: request.model, choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] });
+        }
         const answer = `FAKE AI ANSWER (${turns.length} message${turns.length === 1 ? '' : 's'}): ${String(turns[turns.length - 1].content).slice(0, 60)}`;
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
         const chunk = (delta, finish = null) =>
@@ -148,15 +168,21 @@ http.createServer(async (req, res) => {
         return send(res, 200, row.used);
     }
 
-    const match = url.pathname.match(/^\/rest\/v1\/(subscriptions|payments|trial_claims|ai_usage|seo_overrides|seo_runs|seo_query_stats|seo_changes|seo_updates|seo_keywords)$/);
+    const match = url.pathname.match(/^\/rest\/v1\/(subscriptions|payments|trial_claims|ai_usage|seo_overrides|seo_runs|seo_query_stats|seo_changes|seo_updates|seo_keywords|seo_forum_threads)$/);
     if (match) {
         const table = match[1];
         const isService = token === 'service-role-key';
         const requester = USERS[token];
         // Emulate row-level security: users only see their own rows; service role sees all.
         const visible = (rows) => (isService || table === 'seo_overrides' ? rows : rows.filter((r) => requester && r.user_id === requester.id));
-        if (req.method === 'GET') {
+        if (req.method === 'GET' || req.method === 'HEAD') {
             const rows = visible(filterRows(table, url.searchParams));
+            // count: 'exact' (with head: true for count-only queries) reads the total from Content-Range.
+            if (String(req.headers.prefer || '').includes('count=exact')) {
+                const range = { 'Content-Range': `${rows.length ? `0-${rows.length - 1}` : '*'}/${rows.length}` };
+                if (req.method === 'HEAD') return send(res, 200, undefined, range);
+                return send(res, 200, rows, range);
+            }
             const single = (req.headers.accept || '').includes('vnd.pgrst.object');
             return send(res, 200, single ? rows[0] ?? null : rows);
         }

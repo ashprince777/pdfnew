@@ -4,12 +4,14 @@ import { notFound } from 'next/navigation';
 import { getCurrentUser, getSupabaseAdmin } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/admin';
 import { isGscConfigured, isoDay } from '@/lib/seoBot/gsc';
+import { isRedditConfigured } from '@/lib/seoBot/forum';
 import { TARGET_KEYWORDS } from '@/lib/seoBot/keywords';
 import { CTR_RATIO, MIN_IMPRESSIONS, expectedCtr, needsRewrite } from '@/lib/seoBot/rules';
 import { STEP_ORDER, type RunSummary } from '@/lib/seoBot/run';
 import Tile from '../Tile';
 import RunNowButton from './RunNowButton';
-import { runSeoBotNow, undoSeoChange } from './actions';
+import { draftPastedQuestion, runSeoBotNow, setForumStatus, undoSeoChange } from './actions';
+import ForumDraft from './ForumDraft';
 import styles from '../Admin.module.css';
 import seo from './SeoAdmin.module.css';
 
@@ -69,13 +71,17 @@ export default async function SeoAdminPage() {
     if (!isAdminEmail(user?.email)) notFound();
 
     const db = getSupabaseAdmin();
-    const [runRes, stats, changesRes, updatesRes, keywordsRes] = await Promise.all([
+    const [runRes, stats, changesRes, updatesRes, keywordsRes, forumRes, postedRes] = await Promise.all([
         db.from('seo_runs').select('*').order('started_at', { ascending: false }).limit(1),
         loadStats(db, isoDay(30)),
         db.from('seo_changes').select('*').order('created_at', { ascending: false }).limit(30),
         db.from('seo_updates').select('*').order('published_at', { ascending: false, nullsFirst: false }).limit(20),
         db.from('seo_keywords').select('keyword, seed, first_seen').eq('covered', false).order('first_seen', { ascending: false }).order('keyword').limit(40),
+        db.from('seo_forum_threads').select('*').eq('status', 'new').order('found_at', { ascending: false }).limit(15),
+        db.from('seo_forum_threads').select('id', { count: 'exact', head: true }).eq('status', 'posted'),
     ]);
+    const forum = (forumRes.data ?? []) as { id: string; source: string; url: string | null; title: string; body: string; community: string | null; posted_at: string | null; draft: string | null }[];
+    const forumMissing = Boolean(forumRes.error);
     const lastRun = runRes.data?.[0] as { started_at: string; finished_at: string | null; status: string; summary: RunSummary } | undefined;
     const changes = (changesRes.data ?? []) as {
         id: number;
@@ -353,6 +359,70 @@ export default async function SeoAdminPage() {
                     )}
                 </section>
             </div>
+
+            <section className={styles.card}>
+                <h2 className={styles.cardTitle}>Forum helper</h2>
+                <p className={styles.muted}>
+                    Questions people asked that your tools solve, each with a drafted answer. Read and edit it, post it yourself from your own
+                    account, then mark it posted. Nothing is posted automatically. {postedRes.count ? `${postedRes.count} answered so far.` : ''}
+                </p>
+                {forumMissing ? (
+                    <p className={seo.alert}>The forum table is not in the database yet. Run supabase/migrations/0005_forum_helper.sql in the Supabase SQL editor.</p>
+                ) : (
+                    <>
+                        {!isRedditConfigured() && (
+                            <p className={seo.alert}>Reddit is not connected, so the bot does not search it yet (see docs/SEO-BOT.md). The box below works without it.</p>
+                        )}
+                        <form action={draftPastedQuestion} className={seo.pasteForm}>
+                            <label className={styles.muted} htmlFor="forum-question">Paste a question from Quora, Reddit, a Telegram group or anywhere (first line = title)</label>
+                            <textarea id="forum-question" name="question" rows={4} required minLength={10} className={seo.input} />
+                            <input name="url" type="url" placeholder="Link to the question (optional)" aria-label="Link to the question" className={seo.input} />
+                            <button type="submit" className="btn btn-primary" style={{ justifySelf: 'start' }}>Draft an answer</button>
+                        </form>
+                        {forum.length === 0 ? (
+                            <p className={styles.muted}>No questions waiting.</p>
+                        ) : (
+                            <ul className={seo.changes}>
+                                {forum.map((t) => (
+                                    <li key={t.id}>
+                                        <div className={seo.cardHead}>
+                                            <span>
+                                                {t.url ? (
+                                                    <a href={t.url} target="_blank" rel="noopener noreferrer" className={seo.link}>{t.title}</a>
+                                                ) : (
+                                                    <strong>{t.title}</strong>
+                                                )}
+                                                <span className={styles.muted}> · {t.community ?? (t.source === 'manual' ? 'pasted' : '')}{t.posted_at ? ` · ${fmtDate(t.posted_at)}` : ''}</span>
+                                            </span>
+                                            <span style={{ display: 'flex', gap: 6 }}>
+                                                {(['posted', 'skipped'] as const).map((status) => (
+                                                    <form key={status} action={setForumStatus}>
+                                                        <input type="hidden" name="id" value={t.id} />
+                                                        <input type="hidden" name="status" value={status} />
+                                                        <button type="submit" className="btn btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-sm)' }}>
+                                                            {status === 'posted' ? 'Mark posted' : 'Skip'}
+                                                        </button>
+                                                    </form>
+                                                ))}
+                                            </span>
+                                        </div>
+                                        {t.body && <p className={styles.muted}>{t.body.slice(0, 280)}{t.body.length > 280 ? '…' : ''}</p>}
+                                        {t.draft && (
+                                            <>
+                                                <ForumDraft draft={t.draft} label={`Draft answer for: ${t.title}`} />
+                                                <p className={styles.muted}>
+                                                    {t.draft.includes('pdfadore.com') ? '' : 'PDFAdore does not fit this question, so the draft has no link. '}
+                                                    Before posting, check every size or rule in the draft against the official notification: AI drafts can be wrong.
+                                                </p>
+                                            </>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </>
+                )}
+            </section>
 
             <section className={styles.card}>
                 <h2 className={styles.cardTitle}>Site check</h2>

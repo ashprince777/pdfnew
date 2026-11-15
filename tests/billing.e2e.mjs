@@ -354,6 +354,19 @@ await check('seo bot: dashboard for admin, live title override on pages', async 
     assert(html.includes('content="Override description set by the SEO bot in the tests."'), 'override description not used');
     const merge = await (await fetch(`${APP}/merge-pdf`)).text();
     assert(merge.includes('<title>Merge PDF Online Free - Combine PDFs | PDFAdore</title>'), 'pages without an override should keep their title');
+    // Forum helper: review queue, mark posted, and drafting an answer for a pasted question.
+    const admin = await pageAs('premium-token');
+    await admin.goto(`${APP}/admin/seo`, { waitUntil: 'networkidle' });
+    await admin.getByRole('heading', { name: 'Forum helper' }).waitFor();
+    assert(await admin.getByLabel('Draft answer for: PSC photo upload says invalid size, help').isVisible(), 'queued draft missing');
+    await admin.getByRole('button', { name: 'Mark posted' }).first().click();
+    await admin.getByText('1 answered so far.').waitFor({ timeout: 15000 });
+    await admin.getByLabel(/Paste a question/).fill('How do I compress my SSC signature to 20 KB?\nThe form rejects my file.');
+    await admin.getByRole('button', { name: 'Draft an answer' }).click();
+    await admin.getByText('FAKE DRAFT for: How do I compress my SSC signature to 20 KB?').waitFor({ timeout: 15000 });
+    assert(!admin.errors.length, admin.errors.join(' | '));
+    await admin.context().close();
+
     const cron = await fetch(`${APP}/api/cron/seo`);
     assert(cron.status === 401, `cron without secret returned ${cron.status}`);
 });

@@ -10,6 +10,7 @@ Runs every day at 07:00 IST (Vercel Cron → `/api/cron/seo`). Results are on **
 | Site audit | Crawls every URL in the sitemap: status, title and description length, canonical, one H1, valid structured data, no stray noindex, duplicate titles. |
 | Google updates | Reads Google's Search Status Dashboard (core, spam and other ranking updates) and the Search Central blog; the AI notes what to check for each new ranking update. |
 | Keyword ideas | Google autocomplete (India) for the main tool keywords; lists suggestions that no page title targets yet. |
+| Forum questions | Searches Reddit for recent questions the tools solve and drafts an answer for each (max 5 a day). The owner reviews, edits and posts by hand from their own account, then marks it posted on /admin/seo. Nothing is posted automatically. A box on the dashboard drafts an answer for any pasted question (Quora, Telegram...). |
 
 ## Guardrails for automatic changes
 
@@ -33,6 +34,8 @@ Runs every day at 07:00 IST (Vercel Cron → `/api/cron/seo`). Results are on **
       - `GSC_PRIVATE_KEY` = `private_key` (the whole value, from `-----BEGIN PRIVATE KEY-----` to `-----END PRIVATE KEY-----`)
       - Optional `GSC_SITE_URL` if the property is not the domain property `sc-domain:pdfadore.com`.
    6. Redeploy, then press **Run now** on /admin/seo.
+
+4. **Reddit (optional, for the Forum questions step)**: run `supabase/migrations/0005_forum_helper.sql` first. Then, signed in to Reddit, open https://www.reddit.com/prefs/apps, click **create another app**, choose **script**, give it a name (e.g. `pdfadore-forum-helper`) and any redirect URL (e.g. `https://www.pdfadore.com`), and create it. Copy the ID under the app name and the **secret**, and add them in Vercel (Production, Sensitive) as `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`. Reddit may ask you to accept its developer terms or request API access first. The app is only used to search; it never posts.
 
 Search Console data is 2-3 days behind, and a new site needs a few weeks of impressions before any page qualifies for a rewrite.
 

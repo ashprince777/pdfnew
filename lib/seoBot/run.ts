@@ -9,17 +9,20 @@ import { gscQueries, isGscConfigured, isoDay } from './gsc';
 import { auditSite, type AuditIssue } from './audit';
 import { fetchSearchUpdates } from './updates';
 import { fetchKeywordIdeas, isCovered } from './keywords';
+import { draftForumAnswer, findRedditThreads, isRedditConfigured } from './forum';
 import { draftRewrite, noteForUpdate } from './rewrite';
 import { COOLDOWN_DAYS, MAX_CHANGES_PER_RUN, REVERT_BACKOFF_DAYS, REVERT_RATIO, MIN_IMPRESSIONS, expectedCtr, needsRewrite, validateDraft, type PageStats } from './rules';
 
 const DAY = 86_400_000;
 /** Same key as public/<key>.txt, so search engines accept the change notifications. */
 const INDEXNOW_KEY = '54a8e380c82e43f0a6321d74b036e357';
+/** New forum threads drafted per run (each is one AI call; the owner answers a few a day). */
+const MAX_FORUM_DRAFTS = 5;
 /** New ranking updates explained by AI per run (keeps within Groq's free per-minute allowance). */
 const MAX_UPDATE_NOTES = 3;
 
 /** Steps in the order they run (the database does not keep the order of JSON keys). */
-export const STEP_ORDER = ['Search Console', 'Check earlier changes', 'Rewrite titles', 'Site audit', 'Google updates', 'Keyword ideas'];
+export const STEP_ORDER = ['Search Console', 'Check earlier changes', 'Rewrite titles', 'Site audit', 'Google updates', 'Keyword ideas', 'Forum questions'];
 
 export interface StepResult {
     status: 'ok' | 'failed' | 'skipped';
@@ -263,6 +266,26 @@ export async function runSeoBot(trigger: RunSummary['trigger']): Promise<{ runId
             if (upsertError) throw new Error(upsertError.message);
         }
         return `${rows.length} suggestions; ${rows.filter((r) => !r.covered).length} not yet targeted by a page title.`;
+    });
+
+    await step('Forum questions', async () => {
+        if (!isRedditConfigured()) return { status: 'skipped', note: 'Reddit is not connected: add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel. Pasting a question on /admin/seo works without it.' };
+        if (!process.env.GROQ_API_KEY) return { status: 'skipped', note: 'GROQ_API_KEY is not set.' };
+        const threads = await findRedditThreads();
+        const { data: known } = await db.from('seo_forum_threads').select('id').in('id', threads.map((t) => t.id));
+        const knownIds = new Set((known ?? []).map((k) => k.id as string));
+        let drafted = 0;
+        let unrelated = 0;
+        for (const thread of threads.filter((t) => !knownIds.has(t.id))) {
+            if (drafted >= MAX_FORUM_DRAFTS) break;
+            const { draft, problem } = await draftForumAnswer(thread);
+            // A draft that does not mention the site means the tools do not fit this question: keep it, but out of the queue.
+            const status = problem === 'no link to the tool' ? 'skipped' : 'new';
+            if (status === 'skipped') unrelated++;
+            else drafted++;
+            await db.from('seo_forum_threads').upsert({ ...thread, source: 'reddit', draft, status });
+        }
+        return `${threads.length} recent questions found; ${drafted} new drafts ready to review${unrelated ? `, ${unrelated} not a fit` : ''}.`;
     });
 
     const failed = Object.values(summary.steps).some((s) => s.status === 'failed');

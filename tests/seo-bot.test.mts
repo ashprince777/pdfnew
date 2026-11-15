@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkPage, expectedCtr, keywordCovered, needsRewrite, validateDraft } from '../lib/seoBot/rules.ts';
+import { draftProblem, isWorthAnswering } from '../lib/seoBot/forumRules.ts';
 
 const current = { title: 'Merge PDF Online Free - Combine PDFs | PDFAdore', description: 'Combine PDF files into one document for free.' };
 const good = {
@@ -65,4 +66,23 @@ test('keyword coverage matches all meaningful words, ignoring filler and size sp
     assert.equal(keywordCovered('pdf to word converter', titles), true);
     assert.equal(keywordCovered('compress pdf to 100kb', titles), false);
     assert.equal(keywordCovered('pdf to excel', titles), false);
+});
+
+test('forum: answer recent, open file questions only', () => {
+    const base = { title: 'Kerala PSC photo upload keeps failing, what size?', body: '', ageDays: 2, comments: 3, locked: false };
+    assert.equal(isWorthAnswering(base), true);
+    assert.equal(isWorthAnswering({ ...base, ageDays: 30 }), false, 'too old');
+    assert.equal(isWorthAnswering({ ...base, comments: 80 }), false, 'already crowded');
+    assert.equal(isWorthAnswering({ ...base, locked: true }), false, 'locked');
+    assert.equal(isWorthAnswering({ ...base, title: 'Best biryani in Kochi?' }), false, 'not a file problem');
+    assert.equal(isWorthAnswering({ ...base, title: 'Selling PDF editor crack keygen' }), false, 'piracy');
+});
+
+test('forum: drafts must disclose and link to the site exactly once', () => {
+    const ok = 'Kerala PSC wants the photo at 150 x 200 pixels and under 30 KB, with your name and the date at the bottom. Crop to your face and shoulders first. I built a free tool that does this: https://www.pdfadore.com/kerala-psc-photo-signature-resize (I built this tool.)';
+    assert.equal(draftProblem(ok), null);
+    assert.equal(draftProblem('Too short. pdfadore.com I built this'), 'too short');
+    assert.equal(draftProblem(ok.replace(/\(I built this tool\.\)/, '').replace('I built a free tool that does this', 'Try this')), 'missing the "I built this" disclosure');
+    assert.equal(draftProblem(ok + ' Also https://www.pdfadore.com/compress-image'), 'links to the site more than once');
+    assert.equal(draftProblem(ok.replace(/https:\S+/, 'the official portal')), 'no link to the tool');
 });
