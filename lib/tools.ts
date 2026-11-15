@@ -364,3 +364,14 @@ export const TOOL_VARIANTS: { title: string; href: string; parent: string }[] = 
     { title: 'WebP to PDF', href: '/webp-to-pdf', parent: '/jpg-to-pdf' },
     { title: 'PDF to PNG', href: '/pdf-to-png', parent: '/pdf-to-jpg' },
 ];
+
+/** Shortcuts for the most common form-upload jobs, shown in the menus. */
+export const FORM_LINKS = [
+    { title: 'Compress PDF to 200 KB', href: '/compress-pdf-to-200kb' },
+    { title: 'Compress PDF to 100 KB', href: '/compress-pdf-to-100kb' },
+    { title: 'Resize image to 20 KB', href: '/resize-image-to-20kb' },
+    { title: 'Resize image to 50 KB', href: '/resize-image-to-50kb' },
+    { title: 'JPG to PDF under 100 KB', href: '/jpg-to-pdf-under-100kb' },
+    { title: 'Kerala PSC photo & signature', href: '/kerala-psc-photo-signature-resize' },
+    { title: 'SSC signature', href: '/ssc-signature-resize' },
+];

@@ -3,19 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
-import { ALL_TOOLS, CATEGORIES } from '@/lib/tools';
+import { ALL_TOOLS, CATEGORIES, FORM_LINKS } from '@/lib/tools';
 import styles from './Navbar.module.css';
 
-/** Shortcuts for the most common form-upload jobs, shown as their own column. */
-const FORM_LINKS = [
-    { title: 'Compress PDF to 200 KB', href: '/compress-pdf-to-200kb' },
-    { title: 'Compress PDF to 100 KB', href: '/compress-pdf-to-100kb' },
-    { title: 'Resize image to 20 KB', href: '/resize-image-to-20kb' },
-    { title: 'Resize image to 50 KB', href: '/resize-image-to-50kb' },
-    { title: 'JPG to PDF under 100 KB', href: '/jpg-to-pdf-under-100kb' },
-    { title: 'Kerala PSC photo & signature', href: '/kerala-psc-photo-signature-resize' },
-    { title: 'SSC signature', href: '/ssc-signature-resize' },
-];
 
 /** "All tools" button in the top bar that opens a menu of every tool, grouped by category. */
 export default function ToolsMenu() {

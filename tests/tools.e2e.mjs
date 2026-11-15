@@ -496,7 +496,15 @@ await test('tools dropdown in the top bar', async (page) => {
     await panel.getByRole('link', { name: 'Compress Image', exact: true }).click();
     await page.waitForURL('**/compress-image');
     assert((await panel.count()) === 0, 'menu should close after navigating');
-    return 'opens, lists tools, closes on Escape and after navigating';
+
+    // Phone menu: the application-form shortcuts are open by default.
+    const phone = await page.context().browser().newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await phone.goto(BASE + '/', { waitUntil: 'networkidle' });
+    await phone.getByRole('button', { name: 'Open navigation menu' }).click();
+    await phone.getByRole('link', { name: 'Kerala PSC photo & signature' }).click();
+    await phone.waitForURL('**/kerala-psc-photo-signature-resize');
+    await phone.close();
+    return 'desktop menu opens, lists tools, closes on Escape and after navigating; phone menu links to Kerala PSC';
 });
 
 await test('jpg to pdf under a size limit', async (page) => {

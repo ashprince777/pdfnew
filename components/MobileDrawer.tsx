@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ALL_TOOLS, CATEGORIES, ToolCategory } from '@/lib/tools';
-import { X, Search, ChevronRight, Sparkles, Crown, UserRound } from 'lucide-react';
+import { ALL_TOOLS, CATEGORIES, FORM_LINKS, ToolCategory } from '@/lib/tools';
+import { X, Search, ChevronRight, Sparkles, Crown, UserRound, FileCheck2 } from 'lucide-react';
 import { usePlan } from '@/components/PlanProvider';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -14,7 +14,7 @@ interface MobileDrawerProps {
 
 export default function MobileDrawer({ isOpen, onClose, onOpenSearch }: MobileDrawerProps) {
     const { authEnabled, billingEnabled, user } = usePlan();
-    const [expandedCategory, setExpandedCategory] = useState<ToolCategory | 'all'>('organize');
+    const [expandedCategory, setExpandedCategory] = useState<ToolCategory | 'all' | 'forms'>('forms');
 
     useEffect(() => {
         if (isOpen) {
@@ -180,6 +180,61 @@ export default function MobileDrawer({ isOpen, onClose, onOpenSearch }: MobileDr
                 >
                     <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-light)', margin: '12px 0 8px' }}>
                         Browse by Category
+                    </div>
+
+                    {/* Shortcuts for exam and job application uploads (open by default: the most searched jobs). */}
+                    <div style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                        <button
+                            onClick={() => setExpandedCategory(expandedCategory === 'forms' ? 'all' : 'forms')}
+                            aria-expanded={expandedCategory === 'forms'}
+                            style={{
+                                width: '100%',
+                                minHeight: '48px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-color)',
+                                fontSize: 'var(--text-sm)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                padding: '12px 0',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <FileCheck2 size={14} style={{ color: 'var(--primary)' }} />
+                                <span>For application forms</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 400 }}>({FORM_LINKS.length})</span>
+                            </div>
+                            <ChevronRight
+                                size={16}
+                                style={{ transform: expandedCategory === 'forms' ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: 'var(--text-light)' }}
+                            />
+                        </button>
+                        {expandedCategory === 'forms' && (
+                            <div style={{ padding: '0 0 12px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {FORM_LINKS.map((link) => (
+                                    <Link
+                                        key={link.href}
+                                        href={link.href}
+                                        onClick={onClose}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            minHeight: '44px',
+                                            padding: '6px 12px',
+                                            borderRadius: 'var(--radius-sm)',
+                                            textDecoration: 'none',
+                                            color: 'var(--text-color)',
+                                            fontSize: 'var(--text-sm)',
+                                        }}
+                                    >
+                                        {link.title}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => {
