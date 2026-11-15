@@ -358,6 +358,95 @@ await test('pdf to png page defaults to png', async (page) => {
     return files.join(', ');
 });
 
+/** Width and height of a JPEG, read from its start-of-frame marker. */
+function jpegSize(bytes) {
+    for (let i = 2; i + 9 < bytes.length; ) {
+        const marker = bytes[i + 1];
+        if (marker >= 0xc0 && marker <= 0xc2) return { height: (bytes[i + 5] << 8) | bytes[i + 6], width: (bytes[i + 7] << 8) | bytes[i + 8] };
+        i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
+    }
+    return null;
+}
+
+/** A detailed 1600 x 1200 photo-like JPEG (several hundred KB), made in the browser. */
+async function makeBigPhoto(page) {
+    const target = fx('big-photo.jpg');
+    if (fs.existsSync(target)) return target;
+    const b64 = await page.evaluate(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1600;
+        canvas.height = 1200;
+        const ctx = canvas.getContext('2d');
+        const image = ctx.createImageData(1600, 1200);
+        let seed = 7;
+        for (let i = 0; i < image.data.length; i += 4) {
+            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+            const x = (i / 4) % 1600;
+            const y = Math.floor(i / 4 / 1600);
+            const noise = (seed >> 16) & 63;
+            image.data[i] = (x / 7 + noise) & 255;
+            image.data[i + 1] = (y / 5 + noise) & 255;
+            image.data[i + 2] = ((x + y) / 9 + noise) & 255;
+            image.data[i + 3] = 255;
+        }
+        ctx.putImageData(image, 0, 0);
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 90px sans-serif';
+        ctx.fillText('CERTIFICATE 2026', 120, 300);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let out = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        return btoa(out);
+    });
+    fs.writeFileSync(target, Buffer.from(b64, 'base64'));
+    return target;
+}
+
+await test('compress image to a size in KB and to exact pixels', async (page) => {
+    await open(page, '/resize-image-to-20kb');
+    await page.getByRole('heading', { level: 1, name: 'Resize Image to 20 KB' }).waitFor();
+    const big = await makeBigPhoto(page);
+    assert(fs.statSync(big).size > 300 * 1024, `test photo too small: ${fs.statSync(big).size}`);
+    await upload(page, big);
+    await click(page, /Compress image/);
+    const small = await result(page);
+    assert(small.filename.endsWith('_20kb.jpg'), small.filename);
+    assert(small.bytes.length <= 20 * 1024, `result ${small.bytes.length} bytes is over 20 KB`);
+    assert(small.bytes.length > 8 * 1024, `result ${small.bytes.length} bytes wastes most of the 20 KB limit`);
+
+    await open(page, '/compress-image');
+    await upload(page, big);
+    await page.locator('#image-target-kb').fill('50');
+    await page.getByLabel('Width in pixels').fill('200');
+    await page.getByLabel('Height in pixels').fill('230');
+    await click(page, /Compress image/);
+    const exact = await result(page);
+    const size = jpegSize(exact.bytes);
+    assert(size?.width === 200 && size?.height === 230, `expected 200x230, got ${JSON.stringify(size)}`);
+    assert(exact.bytes.length <= 50 * 1024, `result ${exact.bytes.length} bytes is over 50 KB`);
+    return `${Math.round(small.bytes.length / 1024)} KB under 20 KB; exact 200x230 at ${Math.round(exact.bytes.length / 1024)} KB`;
+});
+
+await test('jpg to pdf under a size limit', async (page) => {
+    await open(page, '/jpg-to-pdf-under-100kb');
+    await page.getByRole('heading', { level: 1, name: 'JPG to PDF under 100 KB' }).waitFor();
+    const big = await makeBigPhoto(page);
+    await upload(page, [big, big]);
+    await click(page, /Convert to PDF/);
+    const { bytes, heading } = await result(page);
+    const info = await pdfInfo(bytes);
+    assert(info.numPages === 2, `expected 2 pages, got ${info.numPages}`);
+    assert(bytes.length <= 100 * 1024, `PDF is ${bytes.length} bytes, over 100 KB`);
+    assert(bytes.length > 50 * 1024, `PDF is only ${bytes.length} bytes: compressed far more than needed`);
+    assert(/under your 100 KB limit/.test(heading), `message: ${heading}`);
+    const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    for (const route of ['/compress-image', '/resize-image-to-20kb', '/resize-image-to-500kb', '/jpg-to-pdf-under-100kb', '/jpg-to-pdf-under-500kb']) {
+        assert(sitemap.includes(route), `${route} missing from sitemap`);
+    }
+    return `2 photos (${Math.round((2 * fs.statSync(big).size) / 1024)} KB) → ${Math.round(bytes.length / 1024)} KB PDF`;
+});
+
 await test('png and webp to pdf pages', async (page) => {
     for (const [route, heading] of [['/png-to-pdf', 'PNG to PDF'], ['/webp-to-pdf', 'WebP to PDF']]) {
         await open(page, route);

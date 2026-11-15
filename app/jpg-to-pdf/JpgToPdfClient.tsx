@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { PDFDocument, type PDFImage } from '@cantoo/pdf-lib';
+import Link from 'next/link';
 import { ArrowRight, ArrowUp, ArrowDown, Trash2, GripVertical } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 import Processing from '@/components/Processing';
@@ -8,6 +9,8 @@ import DownloadResult from '@/components/DownloadResult';
 import ReorderableList from '@/components/ReorderableList';
 import { ToolHeader, ToolWorkspace, OptionsCard, ChoiceGroup, PrimaryAction, toolStyles } from '@/components/ToolUI';
 import { formatBytes, PdfToolError, savePdf } from '@/lib/pdf';
+import { fitImageToSize } from '@/lib/imageFit';
+import { JPG_PDF_SIZE_PRESETS_KB, sizeLabel, sizeSlug } from '@/lib/compressSizes';
 import { useToolRunner } from '@/lib/useToolRunner';
 
 type PageSize = 'fit' | 'a4' | 'letter';
@@ -16,6 +19,11 @@ type Margin = 'none' | 'small' | 'large';
 const PAGE_SIZES: Record<Exclude<PageSize, 'fit'>, [number, number]> = { a4: [595.28, 841.89], letter: [612, 792] };
 const MARGINS: Record<Margin, number> = { none: 0, small: 20, large: 48 };
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.gif,.bmp';
+/** Rough size of the PDF structure itself: the file, plus each page. */
+const PDF_OVERHEAD_BYTES = 1500;
+const PAGE_OVERHEAD_BYTES = 600;
+/** Rebuilds with a smaller image budget this many times if the PDF is still over the limit. */
+const SIZE_ATTEMPTS = 4;
 
 interface ImageItem {
     id: string;
@@ -86,14 +94,18 @@ async function embedImage(pdfDoc: PDFDocument, file: File): Promise<PDFImage> {
     }
 }
 
-/** The PNG to PDF and WebP to PDF pages reuse this tool with their own heading. */
+/** The PNG to PDF, WebP to PDF and "under 100 KB" pages reuse this tool with their own heading and size limit. */
 export default function JpgToPdfClient({
     title = 'JPG to PDF',
     subtitle = 'Convert JPG, PNG and other images into a single PDF, in the order you choose.',
-}: { title?: string; subtitle?: string }) {
+    defaultMaxKb,
+}: { title?: string; subtitle?: string; defaultMaxKb?: number }) {
     const [items, setItems] = useState<ImageItem[]>([]);
     const [pageSize, setPageSize] = useState<PageSize>('a4');
     const [margin, setMargin] = useState<Margin>('small');
+    /** Size limit for the finished PDF in KB; empty for no limit. */
+    const [maxKb, setMaxKb] = useState(defaultMaxKb ? String(defaultMaxKb) : '');
+    const [message, setMessage] = useState('');
     const tool = useToolRunner();
 
     const itemsRef = useRef(items);
@@ -113,33 +125,58 @@ export default function JpgToPdfClient({
         setItems((prev) => prev.filter((i) => i.id !== id));
     };
 
+    /** Builds the PDF; with `imageBudget`, every image is first compressed to at most that many bytes. */
+    const buildPdf = async (imageBudget?: number): Promise<Blob> => {
+        const pdfDoc = await PDFDocument.create();
+        for (let i = 0; i < items.length; i++) {
+            tool.setProgress(`Adding image ${i + 1} of ${items.length}...`);
+            const image = imageBudget
+                ? await pdfDoc.embedJpg(await (await fitImageToSize(items[i].file, imageBudget)).blob.arrayBuffer())
+                : await embedImage(pdfDoc, items[i].file);
+            const m = MARGINS[margin];
+
+            if (pageSize === 'fit') {
+                // 96 DPI: a 1920px wide image becomes a 20-inch page instead of 26 inches.
+                const w = image.width * 0.75;
+                const h = image.height * 0.75;
+                pdfDoc.addPage([w + 2 * m, h + 2 * m]).drawImage(image, { x: m, y: m, width: w, height: h });
+                continue;
+            }
+
+            const [shortSide, longSide] = PAGE_SIZES[pageSize];
+            const landscape = image.width > image.height;
+            const [pw, ph] = landscape ? [longSide, shortSide] : [shortSide, longSide];
+            const scale = Math.min((pw - 2 * m) / image.width, (ph - 2 * m) / image.height);
+            const w = image.width * scale;
+            const h = image.height * scale;
+            pdfDoc.addPage([pw, ph]).drawImage(image, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+        }
+        tool.setProgress('Saving PDF...');
+        return savePdf(pdfDoc);
+    };
+
     const convertToPdf = () => {
         if (items.length === 0) return;
         tool.run(async () => {
-            const pdfDoc = await PDFDocument.create();
-            for (let i = 0; i < items.length; i++) {
-                tool.setProgress(`Adding image ${i + 1} of ${items.length}...`);
-                const image = await embedImage(pdfDoc, items[i].file);
-                const m = MARGINS[margin];
-
-                if (pageSize === 'fit') {
-                    // 96 DPI: a 1920px wide image becomes a 20-inch page instead of 26 inches.
-                    const w = image.width * 0.75;
-                    const h = image.height * 0.75;
-                    pdfDoc.addPage([w + 2 * m, h + 2 * m]).drawImage(image, { x: m, y: m, width: w, height: h });
-                    continue;
+            const filename = items.length === 1 ? `${items[0].file.name.replace(/\.[^/.]+$/, '')}.pdf` : 'images.pdf';
+            const limitKb = parseInt(maxKb) || 0;
+            let blob = await buildPdf();
+            setMessage('Your images are now a PDF!');
+            if (limitKb > 0 && blob.size > limitKb * 1024) {
+                // Share the limit between the images, then tighten if the finished file is still over.
+                const limit = limitKb * 1024;
+                let budget = (limit - PDF_OVERHEAD_BYTES - PAGE_OVERHEAD_BYTES * items.length) / items.length;
+                for (let attempt = 0; attempt < SIZE_ATTEMPTS && blob.size > limit && budget > 0; attempt++) {
+                    blob = await buildPdf(budget);
+                    budget *= (limit / blob.size) * 0.95;
                 }
-
-                const [shortSide, longSide] = PAGE_SIZES[pageSize];
-                const landscape = image.width > image.height;
-                const [pw, ph] = landscape ? [longSide, shortSide] : [shortSide, longSide];
-                const scale = Math.min((pw - 2 * m) / image.width, (ph - 2 * m) / image.height);
-                const w = image.width * scale;
-                const h = image.height * scale;
-                pdfDoc.addPage([pw, ph]).drawImage(image, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+                setMessage(
+                    blob.size <= limit
+                        ? `Your PDF is ready: ${formatBytes(blob.size)}, under your ${sizeLabel(limitKb)} limit.`
+                        : `These images could not fit under ${sizeLabel(limitKb)}. The smallest PDF is ${formatBytes(blob.size)}. Try fewer images or a larger limit.`
+                );
             }
-            tool.setProgress('Saving PDF...');
-            return { blob: await savePdf(pdfDoc), filename: items.length === 1 ? `${items[0].file.name.replace(/\.[^/.]+$/, '')}.pdf` : 'images.pdf' };
+            return { blob, filename };
         }, 'An error occurred during conversion.');
     };
 
@@ -212,6 +249,23 @@ export default function JpgToPdfClient({
                                     { value: 'large', title: 'Large margin' },
                                 ]}
                             />
+                            <div style={{ display: 'grid', gap: 8 }}>
+                                <label className={toolStyles.label} htmlFor="pdf-max-kb">Maximum PDF size in KB (optional)</label>
+                                <input
+                                    id="pdf-max-kb"
+                                    type="number"
+                                    min={20}
+                                    step={10}
+                                    placeholder="No limit"
+                                    value={maxKb}
+                                    onChange={(e) => setMaxKb(e.target.value)}
+                                    className={toolStyles.input}
+                                    style={{ maxWidth: 200 }}
+                                />
+                                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-light)' }}>
+                                    For form uploads with a size limit. Images are compressed only as much as needed to fit.
+                                </p>
+                            </div>
                         </div>
                     </OptionsCard>
 
@@ -219,6 +273,20 @@ export default function JpgToPdfClient({
                         Convert to PDF <ArrowRight size={22} />
                     </PrimaryAction>
                 </ToolWorkspace>
+            )}
+
+            {tool.status === 'IDLE' && (
+                <p style={{ textAlign: 'center', marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-light)' }}>
+                    JPG to PDF under a size limit:{' '}
+                    {JPG_PDF_SIZE_PRESETS_KB.map((kb, i) => (
+                        <span key={kb}>
+                            {i > 0 && ' · '}
+                            <Link href={`/jpg-to-pdf-under-${sizeSlug(kb)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                                {sizeLabel(kb)}
+                            </Link>
+                        </span>
+                    ))}
+                </p>
             )}
 
             {tool.status === 'PROCESSING' && <Processing status={tool.progress || 'Converting images to PDF...'} />}
@@ -229,7 +297,7 @@ export default function JpgToPdfClient({
                     downloadFilename={tool.result.filename}
                     fileSize={tool.result.size}
                     onReset={reset}
-                    message="Your images are now a PDF!"
+                    message={message}
                 />
             )}
         </div>

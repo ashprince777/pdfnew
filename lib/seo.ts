@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { SITE } from './site';
 import { ALL_TOOLS } from './tools';
-import { SIZE_PRESETS_KB, sizeLabel, sizeSlug } from './compressSizes';
+import { IMAGE_SIZE_PRESETS_KB, JPG_PDF_SIZE_PRESETS_KB, SIZE_PRESETS_KB, sizeLabel, sizeSlug } from './compressSizes';
 import { ARTICLES, type Article } from './blog';
 
 /**
@@ -40,6 +40,10 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     '/compress-pdf': {
         title: 'Compress PDF to 100KB, 200KB Online Free | PDFAdore',
         description: 'Reduce PDF size online for free, or compress to an exact size like 100 KB or 200 KB for government and exam forms. No upload and no sign-up required.',
+    },
+    '/compress-image': {
+        title: 'Compress Image to 20KB, 50KB, 100KB Online Free | PDFAdore',
+        description: 'Reduce a photo, signature or scan to an exact size in KB for exam and government forms. Set width and height in pixels too. Free, and nothing is uploaded.',
     },
     '/repair-pdf': {
         title: 'Repair PDF Online Free - Fix Corrupted PDF | PDFAdore',
@@ -163,7 +167,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     },
     // ---- Static pages --------------------------------------------------------------------------------
     '/all-tools': {
-        title: 'All 32 Free PDF Tools in One Place | PDFAdore',
+        title: 'All 33 Free PDF Tools in One Place | PDFAdore',
         description: 'Every PDFAdore tool in one list: merge, split, compress, convert, edit, sign, protect and AI PDF tools. Free, private and runs right in your browser.',
     },
     '/pricing': {
@@ -257,6 +261,24 @@ for (const kb of SIZE_PRESETS_KB) {
     PAGE_SEO[`/compress-pdf-to-${sizeSlug(kb)}`] = {
         title: `Compress PDF to ${label} Online Free | PDFAdore`,
         description: `Reduce a PDF to under ${label} in seconds for government forms, exam applications and email. Free, no sign-up, and your file never leaves your device.`,
+    };
+}
+
+/** Photo size pages (/resize-image-to-20kb etc.). */
+for (const kb of IMAGE_SIZE_PRESETS_KB) {
+    const label = sizeLabel(kb);
+    PAGE_SEO[`/resize-image-to-${sizeSlug(kb)}`] = {
+        title: `Resize Image to ${label} - Compress JPEG & Photo Free | PDFAdore`,
+        description: `Compress a JPEG, PNG photo or signature to under ${label} in seconds for online application forms. Free, no sign-up, and your image never leaves your device.`,
+    };
+}
+
+/** JPG to PDF with a size limit (/jpg-to-pdf-under-100kb etc.). */
+for (const kb of JPG_PDF_SIZE_PRESETS_KB) {
+    const label = sizeLabel(kb);
+    PAGE_SEO[`/jpg-to-pdf-under-${sizeSlug(kb)}`] = {
+        title: `JPG to PDF Under ${label} - Convert Photo to PDF Free | PDFAdore`,
+        description: `Convert JPG photos and scans into one PDF that stays under ${label} for form uploads. Free, works on your phone, and your images are never uploaded anywhere.`,
     };
 }
 

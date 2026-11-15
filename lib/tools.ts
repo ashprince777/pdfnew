@@ -27,6 +27,7 @@ import {
     FormInput,
     ScanLine,
     Type,
+    ImageDown,
     LucideIcon
 } from 'lucide-react';
 
@@ -119,6 +120,14 @@ export const ALL_TOOLS: ToolItem[] = [
         description: 'Recover and restore unreadable or damaged PDF documents.',
         href: '/repair-pdf',
         icon: ShieldCheck,
+        color: 'var(--cat-optimize)',
+        category: 'optimize',
+    },
+    {
+        title: 'Compress Image',
+        description: 'Reduce a photo or signature to an exact size in KB for forms.',
+        href: '/compress-image',
+        icon: ImageDown,
         color: 'var(--cat-optimize)',
         category: 'optimize',
     },

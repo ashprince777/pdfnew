@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next';
 import { ALL_TOOLS, TOOL_VARIANTS } from '@/lib/tools';
 import { ARTICLES } from '@/lib/blog';
-import { SIZE_PRESETS_KB, sizeSlug } from '@/lib/compressSizes';
+import { IMAGE_SIZE_PRESETS_KB, JPG_PDF_SIZE_PRESETS_KB, SIZE_PRESETS_KB, sizeSlug } from '@/lib/compressSizes';
 
 const BASE_URL = 'https://www.pdfadore.com';
 // Bump when page content changes meaningfully; a per-request date tells crawlers everything changes daily.
-const LAST_UPDATED = new Date('2026-10-25');
+const LAST_UPDATED = new Date('2026-11-15');
 
 const STATIC_PAGES = ['/pricing', '/refund-policy', '/shipping-policy', '/all-tools', '/faq', '/about', '/contact', '/privacy', '/terms', '/deletion-policy'];
 
@@ -26,6 +26,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
         })),
         ...SIZE_PRESETS_KB.map((kb) => ({
             url: `${BASE_URL}/compress-pdf-to-${sizeSlug(kb)}`,
+            lastModified: LAST_UPDATED,
+            changeFrequency: 'monthly' as const,
+            priority: 0.7,
+        })),
+        ...[...IMAGE_SIZE_PRESETS_KB.map((kb) => `/resize-image-to-${sizeSlug(kb)}`), ...JPG_PDF_SIZE_PRESETS_KB.map((kb) => `/jpg-to-pdf-under-${sizeSlug(kb)}`)].map((path) => ({
+            url: `${BASE_URL}${path}`,
             lastModified: LAST_UPDATED,
             changeFrequency: 'monthly' as const,
             priority: 0.7,

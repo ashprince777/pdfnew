@@ -13,6 +13,8 @@ interface ToolSeoContentProps {
     ai?: boolean;
     /** Tools that are part of Premium (the copy must not promise "free"). */
     premium?: boolean;
+    /** What the tool works on, for the "When to ..." heading (default "PDFs"). */
+    subject?: string;
 }
 
 const fmt = (n: number) => `${CURRENCY_SYMBOL}${n.toLocaleString('en-IN')}`;
@@ -25,6 +27,7 @@ export default function ToolSeoContent({
     faqItems,
     ai = false,
     premium = false,
+    subject = 'PDFs',
 }: ToolSeoContentProps) {
     return (
         <div className="prose max-w-4xl mx-auto py-12 px-4 md:px-0">
@@ -69,7 +72,7 @@ export default function ToolSeoContent({
                 </div>
             </div>
 
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">When to {actionName} PDFs</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">When to {actionName} {subject}</h2>
             <ul className="list-disc pl-6 mb-8 text-gray-700 space-y-2">
                 {benefits.map((benefit, index) => (
                     <li key={index}>{benefit}</li>
