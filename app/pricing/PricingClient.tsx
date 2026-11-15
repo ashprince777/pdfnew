@@ -96,7 +96,8 @@ export default function PricingClient({ initialInterval, autoCheckout }: { initi
         };
     }, [billingEnabled, loading, user]);
 
-    const trialDate = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    // Worked out once per visit: the date the first payment is taken if the trial starts now.
+    const [trialDate] = useState(() => new Date(Date.now() + TRIAL_DAYS * 86_400_000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }));
     const showTrial = billingEnabled && trialEligible && !premiumActive;
 
     // Coming back from sign-up with ?checkout=1: continue straight to payment.
